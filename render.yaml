@@ -10,7 +10,9 @@ services:
     envVars:
       - key: OPENAI_API_KEY
         sync: false
+      - key: XAI_API_KEY
+        sync: false
       - key: API_KEY
         sync: false
       - key: PYTHON_VERSION
-        value: 3.9.0
+        value: 3.12.0
