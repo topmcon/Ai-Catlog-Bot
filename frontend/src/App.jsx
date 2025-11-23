@@ -52,15 +52,6 @@ function App() {
       <Header />
       
       <main className="flex-grow container mx-auto px-4 py-8 max-w-7xl">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Catalog-BOT 🤖
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            AI-powered product enrichment. Enter a brand and model number to get comprehensive product details instantly.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column - Form */}
           <div className="space-y-6">
