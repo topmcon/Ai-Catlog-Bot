@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_URL } from '../config/api'
 
 export default function ServerControl() {
   const [backendStatus, setBackendStatus] = useState('checking')
@@ -15,7 +16,7 @@ export default function ServerControl() {
   const checkServers = async () => {
     // Check backend
     try {
-      const response = await fetch('/api/health', { method: 'GET' })
+      const response = await fetch(`${API_URL}/health`, { method: 'GET' })
       setBackendStatus(response.ok ? 'running' : 'stopped')
     } catch (error) {
       setBackendStatus('stopped')

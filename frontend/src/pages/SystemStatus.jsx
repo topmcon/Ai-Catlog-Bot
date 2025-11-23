@@ -29,7 +29,7 @@ export default function SystemStatus() {
   const checkBackend = async () => {
     const startTime = Date.now()
     try {
-      const response = await fetch('/api/health', { method: 'GET' })
+      const response = await fetch(`${API_URL}/health`, { method: 'GET' })
       const data = await response.json()
       const responseTime = Date.now() - startTime
       
@@ -66,7 +66,7 @@ export default function SystemStatus() {
 
   const checkOpenAI = async () => {
     try {
-      const response = await fetch('/api/health', { method: 'GET' })
+      const response = await fetch(`${API_URL}/health`, { method: 'GET' })
       const data = await response.json()
       
       if (data.openai_configured === true) {
@@ -113,7 +113,7 @@ export default function SystemStatus() {
 
   const checkCORS = async () => {
     try {
-      const response = await fetch('/api/', { method: 'GET' })
+      const response = await fetch(`${API_URL}/`, { method: 'GET' })
       if (response.ok) {
         setSystemChecks(prev => ({
           ...prev,
@@ -172,7 +172,7 @@ export default function SystemStatus() {
 
   const testBackendHealth = async () => {
     const start = Date.now()
-    const response = await fetch('/api/health')
+    const response = await fetch(`${API_URL}/health`)
     const duration = Date.now() - start
     const data = await response.json()
     
@@ -185,7 +185,7 @@ export default function SystemStatus() {
 
   const testRootEndpoint = async () => {
     const start = Date.now()
-    const response = await fetch('/api/')
+    const response = await fetch(`${API_URL}/`)
     const duration = Date.now() - start
     const data = await response.json()
     
@@ -198,7 +198,7 @@ export default function SystemStatus() {
 
   const testAuthentication = async () => {
     const start = Date.now()
-    const response = await fetch('/api/enrich', {
+    const response = await fetch(`${API_URL}/enrich`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ brand: 'Test', model_number: 'Test' })
@@ -214,11 +214,11 @@ export default function SystemStatus() {
 
   const testEnrichment = async () => {
     const start = Date.now()
-    const response = await fetch('/api/enrich', {
+    const response = await fetch(`${API_URL}/enrich`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-KEY': 'test123'
+        'X-API-KEY': API_KEY
       },
       body: JSON.stringify({ brand: 'Fisher & Paykel', model_number: 'OS24NDB1' })
     })
@@ -233,7 +233,7 @@ export default function SystemStatus() {
 
   const testResponseTime = async () => {
     const start = Date.now()
-    await fetch('/api/health')
+    await fetch(`${API_URL}/health`)
     const duration = Date.now() - start
     
     return {

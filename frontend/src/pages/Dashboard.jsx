@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { API_URL } from '../config/api'
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -30,7 +31,7 @@ export default function Dashboard() {
 
   const checkBackendStatus = async () => {
     try {
-      const response = await fetch('/api/health')
+      const response = await fetch(`${API_URL}/health`)
       if (response.ok) {
         setStats(prev => ({ ...prev, backendStatus: 'online' }))
       } else {
