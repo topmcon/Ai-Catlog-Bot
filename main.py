@@ -115,7 +115,7 @@ def calculate_field_completeness(product_record: 'ProductRecord') -> float:
                     count_fields(item, parent_key)
     
     # Convert to dict and count
-    data_dict = product_record.model_dump()
+    data_dict = product_record.dict()
     count_fields(data_dict)
     
     return (populated_fields / total_fields * 100) if total_fields > 0 else 0.0
