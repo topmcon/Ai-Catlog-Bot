@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { API_URL } from '../config/api'
 
 export default function APITesting() {
   const [selectedEndpoint, setSelectedEndpoint] = useState('health')
@@ -100,7 +101,7 @@ export default function APITesting() {
 
   const generateCurl = () => {
     const endpoint = endpoints[selectedEndpoint]
-    let curl = `curl -X ${endpoint.method} http://localhost:8000${endpoint.path}`
+    let curl = `curl -X ${endpoint.method} ${API_URL}${endpoint.path}`
 
     if (endpoint.requiresAuth) {
       curl += ` \\\n  -H "X-API-KEY: ${apiKey || 'YOUR_API_KEY'}"`

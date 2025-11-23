@@ -86,7 +86,7 @@ export default function ServerControl() {
 
           <div className="space-y-3 mb-4">
             <InfoRow label="Port" value="8000" />
-            <InfoRow label="URL" value="http://localhost:8000" />
+            <InfoRow label="URL" value={API_URL} />
             <InfoRow label="Health" value={backendStatus === 'running' ? '✅ Healthy' : '❌ Down'} />
           </div>
 
@@ -130,7 +130,7 @@ export default function ServerControl() {
 
           <div className="space-y-3 mb-4">
             <InfoRow label="Port" value="3000" />
-            <InfoRow label="URL" value="http://localhost:3000" />
+            <InfoRow label="URL" value={FRONTEND_URL} />
             <InfoRow label="Health" value="✅ Healthy" />
           </div>
 

@@ -3,6 +3,7 @@ import ProductForm from './components/ProductForm'
 import ProductDisplay from './components/ProductDisplay'
 import Header from './components/Header'
 import Footer from './components/Footer'
+import { API_URL, API_KEY } from './config/api'
 
 function App() {
   const [productData, setProductData] = useState(null)
@@ -15,16 +16,11 @@ function App() {
     setProductData(null)
 
     try {
-      // Use proxy in development, direct URL in production
-      const apiUrl = import.meta.env.PROD 
-        ? import.meta.env.VITE_API_URL || 'https://catalog-bot.onrender.com'
-        : '/api'
-      
-      const response = await fetch(`${apiUrl}/enrich`, {
+      const response = await fetch(`${API_URL}/enrich`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-KEY': import.meta.env.VITE_API_KEY || 'test123'
+          'X-API-KEY': API_KEY
         },
         body: JSON.stringify({
           brand: brand,
