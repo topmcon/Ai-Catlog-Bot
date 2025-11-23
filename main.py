@@ -473,6 +473,22 @@ async def get_ai_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
         "timestamp": datetime.utcnow().isoformat()
     }
 
+# Parts AI Metrics endpoint
+@app.get("/parts-ai-metrics")
+async def get_parts_ai_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
+    """
+    Get detailed performance metrics for parts enrichment AI providers.
+    Requires X-API-KEY header for authentication.
+    """
+    await verify_api_key(x_api_key)
+    
+    from parts import parts_ai_metrics
+    
+    return {
+        "metrics": parts_ai_metrics,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
 # AI Performance Comparison endpoint
 @app.get("/ai-comparison")
 async def get_ai_comparison(x_api_key: str = Header(..., alias="X-API-KEY")):
@@ -571,6 +587,85 @@ async def enrich_product(
     
     except Exception as e:
         return EnrichResponse(
+            success=False,
+            error=str(e)
+        )
+
+
+# Parts enrichment endpoint
+class PartEnrichRequest(BaseModel):
+    """Request body for parts enrichment"""
+    part_number: str = Field(..., description="OEM part number")
+    brand: str = Field(..., description="Brand name")
+
+
+class PartEnrichResponse(BaseModel):
+    """Response from parts enrichment"""
+    success: bool
+    data: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    metrics: Optional[Dict[str, Any]] = None
+
+
+@app.post("/enrich-part", response_model=PartEnrichResponse)
+async def enrich_appliance_part(
+    request: PartEnrichRequest,
+    x_api_key: str = Header(..., alias="X-API-KEY")
+):
+    """
+    Enrich appliance part data using AI.
+    Requires X-API-KEY header for authentication.
+    """
+    # Verify API key
+    await verify_api_key(x_api_key)
+    
+    try:
+        # Import parts module functions
+        from parts import (
+            enrich_part_with_ai, 
+            update_parts_metrics,
+            AI_PROVIDERS as PARTS_AI_PROVIDERS
+        )
+        
+        # Try primary provider (OpenAI), fallback to xAI
+        providers_to_try = ["openai", "xai"] if PARTS_AI_PROVIDERS["openai"]["enabled"] else ["xai"]
+        
+        last_error = None
+        for provider_name in providers_to_try:
+            try:
+                part_record, metrics = enrich_part_with_ai(
+                    request.part_number,
+                    request.brand,
+                    provider=provider_name
+                )
+                
+                # Update metrics
+                update_parts_metrics(provider_name, metrics, success=True)
+                
+                return PartEnrichResponse(
+                    success=True,
+                    data=part_record.dict(),
+                    metrics={
+                        "provider": provider_name,
+                        "response_time": f"{metrics['response_time']:.2f}s",
+                        "tokens_used": metrics['tokens_used'],
+                        "completeness": f"{metrics['completeness']:.1f}%"
+                    }
+                )
+                
+            except Exception as e:
+                last_error = str(e)
+                update_parts_metrics(provider_name, {"error": str(e)}, success=False)
+                continue
+        
+        # All providers failed
+        return PartEnrichResponse(
+            success=False,
+            error=f"All AI providers failed. Last error: {last_error}"
+        )
+    
+    except Exception as e:
+        return PartEnrichResponse(
             success=False,
             error=str(e)
         )
