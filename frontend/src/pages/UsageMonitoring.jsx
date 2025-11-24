@@ -51,32 +51,44 @@ export default function UsageMonitoring() {
       
       if (response.ok) {
         const data = await response.json()
-        setPortalStats(data.portals)
+        setPortalStats(data.portals || {
+          catalog: null,
+          parts: null,
+          home_products: null
+        })
         setSourceStats({
-          ui_calls: data.totals.ui_calls || 0,
-          api_calls: data.totals.api_calls || 0
+          ui_calls: data.totals?.ui_calls || 0,
+          api_calls: data.totals?.api_calls || 0
         })
         setRequestLogs(data.recent_logs || [])
         
         // Calculate average response time safely
-        const avgResponseTime = data.totals.total_requests > 0
+        const avgResponseTime = data.totals?.total_requests > 0
           ? ((data.portals.catalog.avg_response_time + 
              data.portals.parts.avg_response_time + 
              data.portals.home_products.avg_response_time) / 3).toFixed(1)
           : "0.0"
         
         setStats({
-          totalRequests: data.totals.total_requests || 0,
-          successfulRequests: data.totals.successful_requests || 0,
-          failedRequests: data.totals.failed_requests || 0,
-          totalCost: ((data.totals.total_requests || 0) * 0.001).toFixed(3),
+          totalRequests: data.totals?.total_requests || 0,
+          successfulRequests: data.totals?.successful_requests || 0,
+          failedRequests: data.totals?.failed_requests || 0,
+          totalCost: ((data.totals?.total_requests || 0) * 0.001).toFixed(3),
           averageResponseTime: avgResponseTime,
-          todayRequests: data.totals.total_requests || 0
+          todayRequests: data.totals?.total_requests || 0
         })
+      } else {
+        console.error('Failed to fetch metrics:', response.status)
       }
       setLoading(false)
     } catch (error) {
       console.error('Failed to load portal metrics:', error)
+      // Set default values on error
+      setPortalStats({
+        catalog: { total_requests: 0, successful_requests: 0, failed_requests: 0, avg_response_time: 0, ui_calls: 0, api_calls: 0 },
+        parts: { total_requests: 0, successful_requests: 0, failed_requests: 0, avg_response_time: 0, ui_calls: 0, api_calls: 0 },
+        home_products: { total_requests: 0, successful_requests: 0, failed_requests: 0, avg_response_time: 0, ui_calls: 0, api_calls: 0 }
+      })
       setLoading(false)
     }
   }
@@ -151,6 +163,17 @@ export default function UsageMonitoring() {
     window.URL.revokeObjectURL(url)
   }
 
+  if (loading && !portalStats.catalog) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin text-6xl mb-4">⚙️</div>
+          <p className="text-gray-600 text-lg">Loading analytics...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -161,7 +184,8 @@ export default function UsageMonitoring() {
         </div>
         <button
           onClick={exportToCSV}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+          disabled={requestLogs.length === 0}
+          className={`${requestLogs.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors`}
         >
           <span>📥</span>
           <span>Export CSV</span>
