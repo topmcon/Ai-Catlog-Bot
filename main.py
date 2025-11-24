@@ -752,9 +752,17 @@ async def enrich_product(
         # Call OpenAI to generate product data
         product_data = await generate_product_data(request.brand, request.model_number)
         
+        # Convert ProductRecord to dict for validation
+        product_dict = product_data.model_dump() if hasattr(product_data, 'model_dump') else product_data.dict()
+        
+        # Flatten nested structure to get verified_information fields
+        flattened_data = {}
+        if 'verified_information' in product_dict:
+            flattened_data.update(product_dict['verified_information'])
+        
         # Validate data against 2-source verification requirements
         validation_result = validate_product_data(
-            product_data.model_dump() if hasattr(product_data, 'model_dump') else product_data,
+            flattened_data,
             portal='catalog',
             strict_mode=True  # Null out unverified critical fields
         )
@@ -764,14 +772,17 @@ async def enrich_product(
         update_portal_metrics("catalog", success, response_time, source, user_agent, 
                              request.model_number, request.brand)
         
-        # Prepare response with verification metadata
-        response_data = {
+        # Return original ProductRecord structure with verification metadata added
+        return {
             "success": True,
-            "data": validation_result['data']
+            "data": product_data,
+            "verification": {
+                "summary": get_verification_summary(validation_result['verification']),
+                "rate": validation_result['verification']['verification_rate'],
+                "verified_count": validation_result['verification']['verified_fields'],
+                "total_critical_fields": validation_result['verification']['total_critical_fields']
+            }
         }
-        response_data = add_verification_metadata(response_data, validation_result)
-        
-        return response_data
     
     except Exception as e:
         response_time = time.time() - start_time
@@ -850,27 +861,32 @@ async def enrich_appliance_part(
                 update_portal_metrics("parts", success, response_time, source, user_agent,
                                      request.part_number, request.brand)
                 
+                # Flatten part_record to get core_identification fields for validation
+                part_dict = part_record.dict()
+                flattened_data = {}
+                if 'core_identification' in part_dict:
+                    flattened_data.update(part_dict['core_identification'])
+                
                 # Validate part data against 2-source verification requirements
                 validation_result = validate_product_data(
-                    part_record.dict(),
+                    flattened_data,
                     portal='parts',
                     strict_mode=True
                 )
                 
-                # Prepare response with verification metadata
-                response_data = {
-                    "success": True,
-                    "data": validation_result['data'],
-                    "metrics": {
+                # Return original structure with verification metadata
+                return PartEnrichResponse(
+                    success=True,
+                    data=part_dict,
+                    metrics={
                         "provider": provider_name,
                         "response_time": f"{metrics['response_time']:.2f}s",
                         "tokens_used": metrics['tokens_used'],
-                        "completeness": f"{metrics['completeness']:.1f}%"
+                        "completeness": f"{metrics['completeness']:.1f}%",
+                        "verification_rate": f"{validation_result['verification']['verification_rate']:.1f}%",
+                        "verified_fields": f"{validation_result['verification']['verified_fields']}/{validation_result['verification']['total_critical_fields']}"
                     }
-                }
-                response_data = add_verification_metadata(response_data, validation_result)
-                
-                return PartEnrichResponse(**response_data)
+                )
                 
             except Exception as e:
                 last_error = str(e)
@@ -1419,30 +1435,35 @@ async def enrich_home_product_endpoint(
     update_portal_metrics("home_products", True, total_time, source, user_agent,
                          request.model_number, request.brand)
     
+    # Flatten enriched_data to get product_identity fields for validation
+    flattened_data = {}
+    if isinstance(enriched_data, dict):
+        if 'product_identity' in enriched_data:
+            flattened_data.update(enriched_data['product_identity'])
+    
     # Validate data against 2-source verification requirements
     validation_result = validate_product_data(
-        enriched_data,
+        flattened_data,
         portal='home_products',
         strict_mode=True
     )
     
-    # Prepare response with verification metadata
-    response_data = {
+    # Return original structure with verification metadata
+    return {
         "success": True,
-        "data": validation_result['data'],
+        "data": enriched_data,
         "metadata": {
             "ai_provider": provider_used,
             "response_time": round(total_time, 2),
             "ai_processing_time": round(ai_response_time, 2),
             "completeness": round(enriched_data.get("confidence_score", 0), 2),
+            "verification_rate": round(validation_result['verification']['verification_rate'], 2),
+            "verified_fields": f"{validation_result['verification']['verified_fields']}/{validation_result['verification']['total_critical_fields']}",
             "model_number": request.model_number,
             "brand": request.brand,
             "description": request.description
         }
     }
-    response_data = add_verification_metadata(response_data, validation_result)
-    
-    return response_data
 
 @app.get("/home-products-ai-metrics")
 async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):
