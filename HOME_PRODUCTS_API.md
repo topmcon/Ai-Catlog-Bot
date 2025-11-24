@@ -8,7 +8,7 @@ Production: https://api.cxc-ai.com
 ## Authentication
 All requests require API key in header:
 ```
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 ---
@@ -23,7 +23,7 @@ X-API-KEY: test123
 #### Headers
 ```
 Content-Type: application/json
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 #### Request Body
@@ -39,7 +39,7 @@ X-API-KEY: test123
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich-home-product \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{
     "model_number": "K-10433-CP",
     "brand": "Kohler",
@@ -53,7 +53,7 @@ const response = await fetch('https://api.cxc-ai.com/enrich-home-product', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'X-API-KEY': 'test123'
+    'X-API-KEY': 'catbot123'
   },
   body: JSON.stringify({
     model_number: 'K-10433-CP',
@@ -73,7 +73,7 @@ import requests
 url = "https://api.cxc-ai.com/enrich-home-product"
 headers = {
     "Content-Type": "application/json",
-    "X-API-KEY": "test123"
+    "X-API-KEY": "catbot123"
 }
 payload = {
     "model_number": "K-10433-CP",
@@ -294,13 +294,13 @@ print(data)
 
 #### Headers
 ```
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 #### Example Request
 ```bash
 curl https://api.cxc-ai.com/home-products-ai-metrics \
-  -H "X-API-KEY: test123"
+  -H "X-API-KEY: catbot123"
 ```
 
 #### Response
@@ -363,7 +363,7 @@ curl https://api.cxc-ai.com/health
 |--------|----------|---------|
 | **Base URL** | Render/Vercel URLs | `https://api.cxc-ai.com` |
 | **SSL** | Platform-managed | Self-hosted with Let's Encrypt |
-| **API Key** | `test123` | `test123` (unchanged) |
+| **API Key** | `catbot123` | `catbot123` (unchanged) |
 | **Endpoint** | `/enrich-home-product` | `/enrich-home-product` (unchanged) |
 | **AI Providers** | OpenAI only | OpenAI (primary) + xAI (fallback) |
 | **Response** | Basic data | Includes verification metadata |
@@ -381,7 +381,7 @@ curl https://api.cxc-ai.com/health
 # Full Enrichment Test
 curl -X POST https://api.cxc-ai.com/enrich-home-product \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"model_number": "K-10433-CP", "brand": "Kohler"}'
 ```
 
@@ -391,7 +391,7 @@ curl -X POST https://api.cxc-ai.com/enrich-home-product \
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich-home-product \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"model_number": "K-596-CP", "brand": "Kohler", "description": "Bathroom Faucet"}'
 ```
 
@@ -399,7 +399,7 @@ curl -X POST https://api.cxc-ai.com/enrich-home-product \
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich-home-product \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"model_number": "KPF-1610SS", "brand": "Kraus", "description": "Kitchen Faucet"}'
 ```
 
@@ -407,7 +407,7 @@ curl -X POST https://api.cxc-ai.com/enrich-home-product \
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich-home-product \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"model_number": "CH2D084BK10", "brand": "Progress Lighting", "description": "Chandelier"}'
 ```
 

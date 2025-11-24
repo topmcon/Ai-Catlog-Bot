@@ -20,7 +20,7 @@ services:
       redis:
         condition: service_started
     volumes:
-      - ./data:/opt/render/project/src/data
+      - ./data:/app/data
     networks:
       - catalogbot-network
 

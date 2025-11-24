@@ -5,7 +5,7 @@
 
 // Determine API URL based on environment
 export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-export const API_KEY = import.meta.env.VITE_API_KEY || 'test123';
+export const API_KEY = import.meta.env.VITE_API_KEY || 'catbot123';
 
 // Frontend URLs (dynamically determined)
 export const FRONTEND_URL = typeof window !== 'undefined' 

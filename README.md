@@ -189,7 +189,7 @@ curl http://localhost:8000/health
 # Test product enrichment
 curl -X POST http://localhost:8000/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{
     "brand": "Fisher & Paykel",
     "model_number": "OS24NDB1"
@@ -204,7 +204,7 @@ import requests
 url = "http://localhost:8000/enrich"
 headers = {
     "Content-Type": "application/json",
-    "X-API-KEY": "test123"
+    "X-API-KEY": "catbot123"
 }
 data = {
     "brand": "Fisher & Paykel",

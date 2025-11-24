@@ -401,7 +401,7 @@ http://localhost:3000/admin.html
 
 ### Add New CORS Origin
 1. Go to **Configuration** → CORS Origins
-2. Enter domain (e.g., `https://app.example.com`)
+2. Enter domain (e.g., `https://cxc-ai.com`)
 3. Click "➕ Add"
 4. Click "💾 Save Changes"
 
@@ -557,8 +557,8 @@ npm run build
 ### Deploy
 ```bash
 # Deploy dist folder to hosting service
-# Access user portal: https://yourdomain.com/
-# Access admin dashboard: https://yourdomain.com/admin.html
+# Access user portal: https://cxc-ai.com/
+# Access admin dashboard: https://cxc-ai.com/admin.html
 ```
 
 ---

@@ -108,7 +108,7 @@ Create `frontend/.env` for local development:
 
 ```env
 VITE_API_URL=http://localhost:8000
-VITE_API_KEY=test123
+VITE_API_KEY=catbot123
 ```
 
 For production (Vercel):

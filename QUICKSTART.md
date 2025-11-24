@@ -48,7 +48,7 @@ python main.py
 ```bash
 curl -X POST http://localhost:8000/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{
     "brand": "Fisher & Paykel",
     "model_number": "OS24NDB1"

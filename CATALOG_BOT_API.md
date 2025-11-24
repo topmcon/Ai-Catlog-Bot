@@ -8,7 +8,7 @@ Production: https://api.cxc-ai.com
 ## Authentication
 All requests require API key in header:
 ```
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 ---
@@ -23,7 +23,7 @@ X-API-KEY: test123
 #### Headers
 ```
 Content-Type: application/json
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 #### Request Body
@@ -38,7 +38,7 @@ X-API-KEY: test123
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{
     "brand": "Viking",
     "model_number": "VGSC5366BSS"
@@ -51,7 +51,7 @@ const response = await fetch('https://api.cxc-ai.com/enrich', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'X-API-KEY': 'test123'
+    'X-API-KEY': 'catbot123'
   },
   body: JSON.stringify({
     brand: 'Viking',
@@ -70,7 +70,7 @@ import requests
 url = "https://api.cxc-ai.com/enrich"
 headers = {
     "Content-Type": "application/json",
-    "X-API-KEY": "test123"
+    "X-API-KEY": "catbot123"
 }
 payload = {
     "brand": "Viking",
@@ -323,13 +323,13 @@ The API validates MSRP against **authorized sources only**:
 
 #### Headers
 ```
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 #### Example Request
 ```bash
 curl https://api.cxc-ai.com/ai-metrics \
-  -H "X-API-KEY: test123"
+  -H "X-API-KEY: catbot123"
 ```
 
 #### Response
@@ -375,13 +375,13 @@ curl https://api.cxc-ai.com/ai-metrics \
 
 #### Headers
 ```
-X-API-KEY: test123
+X-API-KEY: catbot123
 ```
 
 #### Example Request
 ```bash
 curl -X POST https://api.cxc-ai.com/ai-metrics/reset \
-  -H "X-API-KEY: test123"
+  -H "X-API-KEY: catbot123"
 ```
 
 #### Response
@@ -431,7 +431,7 @@ curl https://api.cxc-ai.com/health
 |--------|----------|---------|
 | **Base URL** | Render/Vercel URLs | `https://api.cxc-ai.com` |
 | **SSL** | Platform-managed | Self-hosted with Let's Encrypt |
-| **API Key** | `test123` | `test123` (unchanged) |
+| **API Key** | `catbot123` | `catbot123` (unchanged) |
 | **Endpoint** | `/enrich` | `/enrich` (unchanged) |
 | **AI Providers** | OpenAI only | OpenAI (primary) + xAI (fallback) |
 | **Response** | Basic data | Includes verification metadata |
@@ -450,7 +450,7 @@ curl https://api.cxc-ai.com/health
 # Full Enrichment Test
 curl -X POST https://api.cxc-ai.com/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"brand": "Viking", "model_number": "VGSC5366BSS"}'
 ```
 
@@ -460,7 +460,7 @@ curl -X POST https://api.cxc-ai.com/enrich \
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"brand": "GE", "model_number": "JGB735SPSS"}'
 ```
 
@@ -468,7 +468,7 @@ curl -X POST https://api.cxc-ai.com/enrich \
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"brand": "Sub-Zero", "model_number": "BI-42SID/S/TH"}'
 ```
 
@@ -476,7 +476,7 @@ curl -X POST https://api.cxc-ai.com/enrich \
 ```bash
 curl -X POST https://api.cxc-ai.com/enrich \
   -H "Content-Type: application/json" \
-  -H "X-API-KEY: test123" \
+  -H "X-API-KEY: catbot123" \
   -d '{"brand": "Bosch", "model_number": "SHPM88Z75N"}'
 ```
 
