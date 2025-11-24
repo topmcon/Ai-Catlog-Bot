@@ -67,8 +67,8 @@ AI_PROVIDERS = {
     },
     "xai": {
         "client": xai_client,
-        "model": "grok-beta",
-        "name": "xAI Grok",
+        "model": "grok-2-latest",
+        "name": "xAI Grok 2",
         "enabled": bool(os.getenv("XAI_API_KEY"))
     }
 }
