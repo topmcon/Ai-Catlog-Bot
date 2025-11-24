@@ -3,7 +3,7 @@ name: Deploy to Self-Hosted Server
 on:
   push:
     branches:
-      - main
+      - production
   workflow_dispatch:  # Manual trigger
 
 env:
