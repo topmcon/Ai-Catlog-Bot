@@ -442,7 +442,7 @@ Access the **Admin Dashboard** at `http://localhost:3000/admin.html` for compreh
 - [x] Manual product entry form
 - [x] Formatted product display
 - [x] Example products
-- [x] Deploy to Vercel
+- [x] VPS deployment with GitHub Actions
 
 ### Phase 3: Admin Dashboard ✅ (Complete)
 - [x] 7 admin pages (Dashboard, Server Control, API Testing, Usage, Config, Products, Logs)
