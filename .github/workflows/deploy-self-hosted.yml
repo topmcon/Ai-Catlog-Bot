@@ -1,0 +1,150 @@
+name: Deploy to Self-Hosted Server
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:  # Manual trigger
+
+env:
+  SERVER_HOST: 198.211.105.43
+  DEPLOY_PATH: /var/www/catalogbot
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest
+      
+      - name: Run Tests
+        run: |
+          python -m pytest test_api.py -v
+  
+  deploy-backend:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+      
+      - name: Add Server to Known Hosts
+        run: |
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: Deploy Backend via Docker Compose
+        run: |
+          ssh ${{ secrets.SERVER_USER }}@${{ env.SERVER_HOST }} << 'ENDSSH'
+            cd ${{ env.DEPLOY_PATH }}
+            
+            # Pull latest code
+            git pull origin main
+            
+            # Create .env if not exists
+            if [ ! -f .env ]; then
+              echo "Creating .env file..."
+              cat > .env << 'EOF'
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          XAI_API_KEY=${{ secrets.XAI_API_KEY }}
+          API_KEY=catbot123
+          DATABASE_URL=postgresql://catalogbot:${{ secrets.DB_PASSWORD }}@postgres:5432/catalogbot
+          REDIS_URL=redis://redis:6379/0
+          EOF
+            fi
+            
+            # Deploy with Docker Compose
+            docker-compose down
+            docker-compose pull
+            docker-compose up -d --build
+            
+            # Wait for services
+            sleep 10
+            
+            # Run database migrations
+            docker-compose exec -T backend alembic upgrade head
+            
+            # Check health
+            docker-compose ps
+          ENDSSH
+      
+      - name: Health Check
+        run: |
+          sleep 5
+          curl -f https://api.${{ env.SERVER_HOST }}/health || exit 1
+          echo "✅ Backend deployed successfully!"
+  
+  deploy-frontend:
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Build Frontend
+        working-directory: frontend
+        run: |
+          npm install
+          npm run build
+      
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
+      
+      - name: Deploy Frontend to Server
+        run: |
+          ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+          
+          # Create tarball
+          cd frontend/dist
+          tar -czf frontend.tar.gz *
+          
+          # Upload and extract
+          scp frontend.tar.gz ${{ secrets.SERVER_USER }}@${{ env.SERVER_HOST }}:/tmp/
+          
+          ssh ${{ secrets.SERVER_USER }}@${{ env.SERVER_HOST }} << 'ENDSSH'
+            sudo mkdir -p /var/www/html
+            cd /var/www/html
+            sudo tar -xzf /tmp/frontend.tar.gz
+            sudo chown -R www-data:www-data /var/www/html
+            rm /tmp/frontend.tar.gz
+          ENDSSH
+      
+      - name: Frontend Health Check
+        run: |
+          curl -f https://${{ env.SERVER_HOST }} || exit 1
+          echo "✅ Frontend deployed successfully!"
+  
+  notify:
+    needs: [deploy-backend, deploy-frontend]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.deploy-backend.result }}" == "success" ] && [ "${{ needs.deploy-frontend.result }}" == "success" ]; then
+            echo "🎉 Deployment to ${{ env.SERVER_HOST }} completed successfully!"
+          else
+            echo "❌ Deployment failed. Check logs above."
+            exit 1
+          fi
