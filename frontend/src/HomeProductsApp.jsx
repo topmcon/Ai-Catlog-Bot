@@ -25,13 +25,16 @@ function HomeProductsApp() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-KEY': API_KEY
+          'X-API-KEY': API_KEY,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         body: JSON.stringify({
           model_number: formData.modelNumber,
           brand: formData.brand || null,
           description: formData.description || null
-        })
+        }),
+        cache: 'no-store'
       })
 
       const data = await response.json()

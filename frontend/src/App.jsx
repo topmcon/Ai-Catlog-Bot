@@ -20,12 +20,15 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-KEY': API_KEY
+          'X-API-KEY': API_KEY,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
         },
         body: JSON.stringify({
           brand: brand,
           model_number: modelNumber || 'N/A'
-        })
+        }),
+        cache: 'no-store'
       })
 
       const data = await response.json()
