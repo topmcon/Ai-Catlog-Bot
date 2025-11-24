@@ -67,21 +67,20 @@ You'll get a complete product record in JSON format with:
 
 ---
 
-## 🌐 Deploy to Production (Choose One)
+## 🌐 Deploy to Production
 
-### Option A: Render (Easiest - Free)
-1. Push code to GitHub
-2. Go to [render.com](https://render.com)
-3. Click "New Web Service"
-4. Connect your repo
-5. Add environment variables:
-   - `OPENAI_API_KEY`
-   - `API_KEY`
-6. Deploy!
+### VPS with GitHub Actions (Production)
+1. Push code to `production` branch
+2. GitHub Actions automatically builds and deploys
+3. Docker containers restart with new code
+4. Live in ~40 seconds
 
-**Live URL**: `https://api.cxc-ai.com`
+**Production URLs**:
+- Frontend: https://cxc-ai.com
+- API: https://api.cxc-ai.com
+- Admin: https://cxc-ai.com/admin.html
 
-### Option B: Railway
+### Other Options
 ```bash
 npm i -g @railway/cli
 railway login

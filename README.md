@@ -476,7 +476,7 @@ Access the **Admin Dashboard** at `http://localhost:3000/admin.html` for compreh
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
 - [Salesforce Apex HTTP Callouts](https://developer.salesforce.com/docs/atlas.en-us.apexcode.meta/apexcode/apex_classes_restful_http.htm)
-- [Render Deployment Guide](https://render.com/docs/deploy-fastapi)
+- [Docker Documentation](https://docs.docker.com/)
 
 ---
 
