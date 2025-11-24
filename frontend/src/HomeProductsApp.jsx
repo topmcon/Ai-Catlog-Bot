@@ -38,11 +38,13 @@ function HomeProductsApp() {
 
       if (data.success) {
         // Store both data and metadata for display
-        setProductData({
+        const mergedData = {
           ...data.data,
-          ai_provider: data.metadata?.ai_provider,
-          confidence_score: data.metadata?.completeness || data.data.ai_enrichment?.completeness_score
-        })
+          ai_provider: data.metadata?.ai_provider || data.data?.ai_provider,
+          confidence_score: data.metadata?.completeness || data.data?.ai_enrichment?.completeness_score || data.data?.confidence_score
+        }
+        console.log('Merged product data:', mergedData)
+        setProductData(mergedData)
       } else {
         setError(data.error || 'Failed to enrich product data')
       }
