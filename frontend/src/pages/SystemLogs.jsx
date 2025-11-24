@@ -1,5 +1,21 @@
 import { useState, useEffect, useRef } from 'react'
-import { format } from 'date-fns'
+
+// Helper function to format dates without external library
+const formatDate = (date, formatStr) => {
+  const d = new Date(date)
+  const pad = (n) => n.toString().padStart(2, '0')
+  
+  if (formatStr === 'HH:mm:ss') {
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  }
+  if (formatStr === 'yyyy-MM-dd HH:mm:ss') {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+  }
+  if (formatStr === 'yyyy-MM-dd-HHmmss') {
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`
+  }
+  return d.toISOString()
+}
 
 export default function SystemLogs() {
   const [logs, setLogs] = useState([])
@@ -70,14 +86,14 @@ export default function SystemLogs() {
 
   const downloadLogs = () => {
     const logText = logs.map(log => 
-      `[${format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}] ${log.level.padEnd(8)} ${log.source.padEnd(15)} ${log.message}`
+      `[${formatDate(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}] ${log.level.padEnd(8)} ${log.source.padEnd(15)} ${log.message}`
     ).join('\n')
 
     const blob = new Blob([logText], { type: 'text/plain' })
     const url = window.URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `catalogbot-logs-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.log`
+    a.download = `catalogbot-logs-${formatDate(new Date(), 'yyyy-MM-dd-HHmmss')}.log`
     a.click()
     window.URL.revokeObjectURL(url)
   }
@@ -205,7 +221,7 @@ export default function SystemLogs() {
               {filteredLogs.map((log) => (
                 <div key={log.id} className="flex space-x-2 hover:bg-gray-800 px-2 py-1 rounded">
                   <span className="text-gray-500 flex-shrink-0">
-                    {format(log.timestamp, 'HH:mm:ss')}
+                    {formatDate(log.timestamp, 'HH:mm:ss')}
                   </span>
                   <span className={`flex-shrink-0 w-20 ${getLevelColor(log.level)}`}>
                     {log.level}
@@ -254,7 +270,7 @@ export default function SystemLogs() {
                 {filteredLogs.slice(-20).reverse().map((log) => (
                   <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
                     <td className="py-3 px-4 text-sm text-gray-600 font-mono whitespace-nowrap">
-                      {format(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}
+                      {formatDate(log.timestamp, 'yyyy-MM-dd HH:mm:ss')}
                     </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getLevelBadgeColor(log.level)}`}>
