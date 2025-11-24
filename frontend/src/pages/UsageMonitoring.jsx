@@ -94,21 +94,27 @@ export default function UsageMonitoring() {
   }
 
   const loadMockData = () => {
-    // Generate mock chart data
-    const days = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 1
-    const data = []
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i)
-      data.push({
-        date: format(date, 'MM/dd'),
-        requests: Math.floor(Math.random() * 50) + 30,
-        cost: (Math.random() * 0.08 + 0.02).toFixed(3),
-        avgTime: (Math.random() * 5 + 10).toFixed(1)
-      })
+    try {
+      // Generate mock chart data
+      const days = timeRange === '7days' ? 7 : timeRange === '30days' ? 30 : 1
+      const data = []
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const date = subDays(new Date(), i)
+        data.push({
+          date: format(date, 'MM/dd'),
+          requests: Math.floor(Math.random() * 50) + 30,
+          cost: (Math.random() * 0.08 + 0.02).toFixed(3),
+          avgTime: (Math.random() * 5 + 10).toFixed(1)
+        })
+      }
+      
+      setChartData(data)
+    } catch (error) {
+      console.error('Failed to load mock data:', error)
+      // Set minimal data if error
+      setChartData([])
     }
-    
-    setChartData(data)
 
     // Generate mock logs
     const logs = []
@@ -138,29 +144,37 @@ export default function UsageMonitoring() {
       return
     }
     
-    const headers = ['Timestamp', 'Portal', 'Source', 'Brand', 'Model Number', 'Status', 'Response Time (s)']
-    const rows = requestLogs.map(log => [
-      log.timestamp,
-      log.portal,
-      log.source,
-      log.brand || '',
-      log.model_number || '',
-      log.success ? 'success' : 'failed',
-      log.response_time
-    ])
+    try {
+      const headers = ['Timestamp', 'Portal', 'Source', 'Brand', 'Model Number', 'Status', 'Response Time (s)']
+      const rows = requestLogs.map(log => [
+        log.timestamp,
+        log.portal || 'unknown',
+        log.source || 'unknown',
+        log.brand || '',
+        log.model_number || '',
+        log.success ? 'success' : 'failed',
+        log.response_time || 0
+      ])
 
-    const csv = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n')
+      const csv = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n')
 
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `catalog-bot-usage-${format(new Date(), 'yyyy-MM-dd')}.csv`
-    a.click()
-    window.URL.revokeObjectURL(url)
+      const blob = new Blob([csv], { type: 'text/csv' })
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      
+      const date = new Date()
+      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      a.download = `catalog-bot-usage-${dateStr}.csv`
+      a.click()
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Export failed:', error)
+      alert('Failed to export CSV')
+    }
   }
 
   if (loading && !portalStats.catalog) {
@@ -584,7 +598,13 @@ function PortalCard({ name, icon, stats, color, loading }) {
         
         {stats.last_used && (
           <div className="mt-3 text-xs text-white/60">
-            Last used: {format(new Date(stats.last_used), 'MMM dd, HH:mm:ss')}
+            Last used: {(() => {
+              try {
+                return format(new Date(stats.last_used), 'MMM dd, HH:mm:ss')
+              } catch {
+                return new Date(stats.last_used).toLocaleString()
+              }
+            })()}
           </div>
         )}
       </div>
