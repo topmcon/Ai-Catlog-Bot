@@ -19,6 +19,11 @@ export default function UsageMonitoring() {
     home_products: null
   })
 
+  const [sourceStats, setSourceStats] = useState({
+    ui_calls: 0,
+    api_calls: 0
+  })
+
   const [requestLogs, setRequestLogs] = useState([])
   const [timeRange, setTimeRange] = useState('7days')
   const [chartData, setChartData] = useState([])
@@ -47,6 +52,11 @@ export default function UsageMonitoring() {
       if (response.ok) {
         const data = await response.json()
         setPortalStats(data.portals)
+        setSourceStats({
+          ui_calls: data.totals.ui_calls,
+          api_calls: data.totals.api_calls
+        })
+        setRequestLogs(data.recent_logs || [])
         setStats({
           totalRequests: data.totals.total_requests,
           successfulRequests: data.totals.successful_requests,
@@ -286,6 +296,46 @@ export default function UsageMonitoring() {
           </ResponsiveContainer>
         </div>
 
+        {/* Source Distribution (UI vs API) */}
+        <div className="bg-white rounded-xl shadow-md p-6">
+          <h3 className="text-lg font-semibold mb-4">Call Source Distribution</h3>
+          {loading ? (
+            <div className="text-center text-gray-500 py-4">Loading...</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={200}>
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: 'Portal UI', value: sourceStats.ui_calls, color: '#3b82f6' },
+                    { name: 'Direct API', value: sourceStats.api_calls, color: '#8b5cf6' }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  <Cell fill="#3b82f6" />
+                  <Cell fill="#8b5cf6" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+          <div className="mt-4 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">🖥️ Portal UI Calls:</span>
+              <span className="font-semibold">{sourceStats.ui_calls}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">🔌 Direct API Calls:</span>
+              <span className="font-semibold">{sourceStats.api_calls}</span>
+            </div>
+          </div>
+        </div>
+
         {/* Cost Breakdown */}
         <div className="bg-white rounded-xl shadow-md p-6">
           <h3 className="text-lg font-semibold mb-4">Cost Breakdown</h3>
@@ -316,43 +366,73 @@ export default function UsageMonitoring() {
 
       {/* Request Logs Table */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Recent Requests</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Timestamp</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Brand</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Model</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Time (s)</th>
-                <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              {requestLogs.map((log) => (
-                <tr key={log.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4 text-sm text-gray-600">
-                    {format(new Date(log.timestamp), 'MMM dd, HH:mm:ss')}
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-900 font-medium">{log.brand}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600">{log.model}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      log.status === 'success' 
-                        ? 'bg-green-100 text-green-800' 
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {log.status}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4 text-sm text-gray-600 font-mono">{log.responseTime}</td>
-                  <td className="py-3 px-4 text-sm text-gray-600 font-mono">${log.cost}</td>
+        <h3 className="text-lg font-semibold mb-4">Recent Requests (Last 50)</h3>
+        {loading ? (
+          <div className="text-center text-gray-500 py-8">Loading request logs...</div>
+        ) : requestLogs.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">No requests yet. Start using the portals!</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Timestamp</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Portal</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Source</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Brand</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Model</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Time (s)</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {requestLogs.slice().reverse().map((log, index) => (
+                  <tr key={index} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {format(new Date(log.timestamp), 'MMM dd, HH:mm:ss')}
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        log.portal === 'catalog' ? 'bg-blue-100 text-blue-800' :
+                        log.portal === 'parts' ? 'bg-green-100 text-green-800' :
+                        'bg-purple-100 text-purple-800'
+                      }`}>
+                        {log.portal === 'catalog' ? '🔍 Catalog' :
+                         log.portal === 'parts' ? '⚙️ Parts' :
+                         '🏠 Home Products'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        log.source === 'ui' 
+                          ? 'bg-indigo-100 text-indigo-800' 
+                          : 'bg-purple-100 text-purple-800'
+                      }`}>
+                        {log.source === 'ui' ? '🖥️ Portal UI' : '🔌 Direct API'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-900 font-medium">
+                      {log.brand || <span className="text-gray-400">N/A</span>}
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 font-mono">
+                      {log.model_number || <span className="text-gray-400">N/A</span>}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        log.success
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {log.success ? '✓ Success' : '✗ Failed'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600 font-mono">{log.response_time}s</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -451,6 +531,14 @@ function PortalCard({ name, icon, stats, color, loading }) {
         
         <div className="mt-4 pt-3 border-t border-white/20">
           <div className="flex justify-between text-sm">
+            <span className="text-white/80">🖥️ UI Calls:</span>
+            <span className="font-medium">{stats.ui_calls}</span>
+          </div>
+          <div className="flex justify-between text-sm mt-1">
+            <span className="text-white/80">🔌 API Calls:</span>
+            <span className="font-medium">{stats.api_calls}</span>
+          </div>
+          <div className="flex justify-between text-sm mt-1">
             <span className="text-white/80">✅ Success:</span>
             <span className="font-medium">{stats.successful_requests}</span>
           </div>

@@ -111,7 +111,9 @@ portal_metrics = {
         "failed_requests": 0,
         "total_response_time": 0.0,
         "avg_response_time": 0.0,
-        "last_used": None
+        "last_used": None,
+        "ui_calls": 0,  # Calls from portal UI
+        "api_calls": 0,  # Direct API calls
     },
     "parts": {  # /enrich-part endpoint
         "total_requests": 0,
@@ -119,7 +121,9 @@ portal_metrics = {
         "failed_requests": 0,
         "total_response_time": 0.0,
         "avg_response_time": 0.0,
-        "last_used": None
+        "last_used": None,
+        "ui_calls": 0,
+        "api_calls": 0,
     },
     "home_products": {  # /enrich-home-product endpoint
         "total_requests": 0,
@@ -127,15 +131,27 @@ portal_metrics = {
         "failed_requests": 0,
         "total_response_time": 0.0,
         "avg_response_time": 0.0,
-        "last_used": None
+        "last_used": None,
+        "ui_calls": 0,
+        "api_calls": 0,
     }
 }
 
-def update_portal_metrics(portal_name: str, success: bool, response_time: float):
+# Request logs for detailed tracking (keep last 100 requests)
+request_logs = []
+
+def update_portal_metrics(portal_name: str, success: bool, response_time: float, 
+                          source: str = "api", user_agent: str = None, model_number: str = None, brand: str = None):
     """Update metrics for a specific portal endpoint."""
     metrics = portal_metrics[portal_name]
     metrics["total_requests"] += 1
     metrics["last_used"] = datetime.utcnow().isoformat()
+    
+    # Track source (UI vs API)
+    if source == "ui":
+        metrics["ui_calls"] += 1
+    else:
+        metrics["api_calls"] += 1
     
     if success:
         metrics["successful_requests"] += 1
@@ -143,6 +159,25 @@ def update_portal_metrics(portal_name: str, success: bool, response_time: float)
         metrics["avg_response_time"] = metrics["total_response_time"] / metrics["successful_requests"]
     else:
         metrics["failed_requests"] += 1
+    
+    # Log the request
+    log_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "portal": portal_name,
+        "endpoint": f"/enrich-{portal_name}" if portal_name != "catalog" else "/enrich",
+        "source": source,
+        "success": success,
+        "response_time": round(response_time, 2),
+        "model_number": model_number,
+        "brand": brand,
+        "user_agent": user_agent[:100] if user_agent else None  # Truncate long user agents
+    }
+    
+    request_logs.append(log_entry)
+    
+    # Keep only last 100 logs
+    if len(request_logs) > 100:
+        request_logs.pop(0)
 
 def calculate_field_completeness(product_record: 'ProductRecord') -> float:
     """Calculate what percentage of optional fields are populated."""
@@ -544,6 +579,7 @@ async def get_portal_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
     """
     Get portal-specific usage metrics for all three portals.
     Tracks usage across Catalog, Parts, and Home Products portals.
+    Includes source tracking (UI vs API) and recent request logs.
     Requires X-API-KEY header for authentication.
     """
     await verify_api_key(x_api_key)
@@ -552,6 +588,8 @@ async def get_portal_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
     total_requests = sum(p["total_requests"] for p in portal_metrics.values())
     total_successful = sum(p["successful_requests"] for p in portal_metrics.values())
     total_failed = sum(p["failed_requests"] for p in portal_metrics.values())
+    total_ui_calls = sum(p["ui_calls"] for p in portal_metrics.values())
+    total_api_calls = sum(p["api_calls"] for p in portal_metrics.values())
     
     return {
         "success": True,
@@ -560,8 +598,11 @@ async def get_portal_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
             "total_requests": total_requests,
             "successful_requests": total_successful,
             "failed_requests": total_failed,
-            "success_rate": (total_successful / total_requests * 100) if total_requests > 0 else 0
+            "success_rate": (total_successful / total_requests * 100) if total_requests > 0 else 0,
+            "ui_calls": total_ui_calls,
+            "api_calls": total_api_calls
         },
+        "recent_logs": request_logs[-50:],  # Return last 50 requests
         "timestamp": datetime.utcnow().isoformat()
     }
 
@@ -643,7 +684,9 @@ async def reset_ai_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
 @app.post("/enrich", response_model=EnrichResponse)
 async def enrich_product(
     request: EnrichRequest,
-    x_api_key: str = Header(..., alias="X-API-KEY")
+    x_api_key: str = Header(..., alias="X-API-KEY"),
+    user_agent: str = Header(None, alias="User-Agent"),
+    referer: str = Header(None, alias="Referer")
 ):
     """
     Enrich product data using OpenAI.
@@ -655,12 +698,16 @@ async def enrich_product(
     start_time = time.time()
     success = False
     
+    # Detect source: UI calls will have our frontend URL in referer
+    source = "ui" if referer and ("vercel.app" in referer or "localhost" in referer) else "api"
+    
     try:
         # Call OpenAI to generate product data
         product_data = await generate_product_data(request.brand, request.model_number)
         success = True
         response_time = time.time() - start_time
-        update_portal_metrics("catalog", success, response_time)
+        update_portal_metrics("catalog", success, response_time, source, user_agent, 
+                             request.model_number, request.brand)
         
         return EnrichResponse(
             success=True,
@@ -669,7 +716,8 @@ async def enrich_product(
     
     except Exception as e:
         response_time = time.time() - start_time
-        update_portal_metrics("catalog", success, response_time)
+        update_portal_metrics("catalog", success, response_time, source, user_agent,
+                             request.model_number, request.brand)
         return EnrichResponse(
             success=False,
             error=str(e)
@@ -694,7 +742,9 @@ class PartEnrichResponse(BaseModel):
 @app.post("/enrich-part", response_model=PartEnrichResponse)
 async def enrich_appliance_part(
     request: PartEnrichRequest,
-    x_api_key: str = Header(..., alias="X-API-KEY")
+    x_api_key: str = Header(..., alias="X-API-KEY"),
+    user_agent: str = Header(None, alias="User-Agent"),
+    referer: str = Header(None, alias="Referer")
 ):
     """
     Enrich appliance part data using AI.
@@ -705,6 +755,9 @@ async def enrich_appliance_part(
     
     start_time = time.time()
     success = False
+    
+    # Detect source: UI calls will have our frontend URL in referer
+    source = "ui" if referer and ("vercel.app" in referer or "localhost" in referer) else "api"
     
     try:
         # Import parts module functions
@@ -730,7 +783,13 @@ async def enrich_appliance_part(
                 update_parts_metrics(provider_name, metrics, success=True)
                 success = True
                 response_time = time.time() - start_time
-                update_portal_metrics("parts", success, response_time)
+                
+                # Get headers for source detection
+                from fastapi import Request as FastAPIRequest
+                # Note: We'll need to add request parameter to function signature
+                
+                update_portal_metrics("parts", success, response_time, source, user_agent,
+                                     request.part_number, request.brand)
                 
                 return PartEnrichResponse(
                     success=True,
@@ -750,7 +809,8 @@ async def enrich_appliance_part(
         
         # All providers failed
         response_time = time.time() - start_time
-        update_portal_metrics("parts", success, response_time)
+        update_portal_metrics("parts", success, response_time, source, user_agent,
+                             request.part_number, request.brand)
         return PartEnrichResponse(
             success=False,
             error=f"All AI providers failed. Last error: {last_error}"
@@ -1123,7 +1183,9 @@ class HomeProductEnrichRequest(BaseModel):
 @app.post("/enrich-home-product")
 async def enrich_home_product_endpoint(
     request: HomeProductEnrichRequest,
-    x_api_key: Optional[str] = Header(None)
+    x_api_key: Optional[str] = Header(None),
+    user_agent: str = Header(None, alias="User-Agent"),
+    referer: str = Header(None, alias="Referer")
 ):
     """
     Enrich home product data (Plumbing, Kitchen, Lighting, Bath, Fans, Hardware, Outdoor, HVAC)
@@ -1141,6 +1203,9 @@ async def enrich_home_product_endpoint(
         raise HTTPException(status_code=400, detail="Model number is required")
     
     start_time = time.time()
+    
+    # Detect source: UI calls will have our frontend URL in referer
+    source = "ui" if referer and ("vercel.app" in referer or "localhost" in referer) else "api"
     
     # Determine which AI provider to use (primary: OpenAI, fallback: xAI)
     primary_provider = "openai"
@@ -1175,7 +1240,8 @@ async def enrich_home_product_endpoint(
             )
         except Exception as fallback_error:
             total_time = time.time() - start_time
-            update_portal_metrics("home_products", False, total_time)
+            update_portal_metrics("home_products", False, total_time, source, user_agent,
+                                 request.model_number, request.brand)
             raise HTTPException(
                 status_code=500,
                 detail=f"All AI providers failed. Primary: {str(e)}, Fallback: {str(fallback_error)}"
@@ -1184,7 +1250,8 @@ async def enrich_home_product_endpoint(
     total_time = time.time() - start_time
     
     # Update portal metrics
-    update_portal_metrics("home_products", True, total_time)
+    update_portal_metrics("home_products", True, total_time, source, user_agent,
+                         request.model_number, request.brand)
     
     return {
         "success": True,
