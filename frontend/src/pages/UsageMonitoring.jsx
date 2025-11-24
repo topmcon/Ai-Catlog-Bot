@@ -1,25 +1,71 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { format, subDays } from 'date-fns'
+import { API_URL, API_KEY } from '../config/api'
 
 export default function UsageMonitoring() {
   const [stats, setStats] = useState({
-    totalRequests: 1247,
-    successfulRequests: 1198,
-    failedRequests: 49,
-    totalCost: 1.247,
-    averageResponseTime: 12.4,
-    todayRequests: 87
+    totalRequests: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    totalCost: 0,
+    averageResponseTime: 0,
+    todayRequests: 0
+  })
+
+  const [portalStats, setPortalStats] = useState({
+    catalog: null,
+    parts: null,
+    home_products: null
   })
 
   const [requestLogs, setRequestLogs] = useState([])
   const [timeRange, setTimeRange] = useState('7days')
   const [chartData, setChartData] = useState([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Load mock data
+    loadPortalMetrics()
+    // Refresh every 30 seconds
+    const interval = setInterval(loadPortalMetrics, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  useEffect(() => {
+    // Load mock data for charts (will be replaced with real data later)
     loadMockData()
   }, [timeRange])
+
+  const loadPortalMetrics = async () => {
+    try {
+      const response = await fetch(`${API_URL}/portal-metrics`, {
+        headers: {
+          'X-API-KEY': API_KEY
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        setPortalStats(data.portals)
+        setStats({
+          totalRequests: data.totals.total_requests,
+          successfulRequests: data.totals.successful_requests,
+          failedRequests: data.totals.failed_requests,
+          totalCost: (data.totals.total_requests * 0.001).toFixed(3), // Estimate
+          averageResponseTime: (
+            (data.portals.catalog.avg_response_time + 
+             data.portals.parts.avg_response_time + 
+             data.portals.home_products.avg_response_time) / 3
+          ).toFixed(1),
+          todayRequests: data.totals.total_requests // Simplified
+        })
+      }
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to load portal metrics:', error)
+      setLoading(false)
+    }
+  }
 
   const loadMockData = () => {
     // Generate mock chart data
@@ -107,31 +153,59 @@ export default function UsageMonitoring() {
         <StatCard
           icon="📊"
           label="Total Requests"
-          value={stats.totalRequests.toLocaleString()}
-          change="+12.5%"
-          changeType="positive"
+          value={loading ? "Loading..." : stats.totalRequests.toLocaleString()}
+          change=""
+          changeType="neutral"
         />
         <StatCard
           icon="💰"
-          label="Total Cost"
-          value={`$${stats.totalCost.toFixed(2)}`}
-          change="+$0.09"
+          label="Est. Total Cost"
+          value={loading ? "..." : `$${stats.totalCost}`}
+          change=""
           changeType="neutral"
         />
         <StatCard
           icon="⚡"
           label="Avg Response Time"
-          value={`${stats.averageResponseTime}s`}
-          change="-0.8s"
+          value={loading ? "..." : `${stats.averageResponseTime}s`}
+          change=""
           changeType="positive"
         />
         <StatCard
           icon="✅"
           label="Success Rate"
-          value={`${((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1)}%`}
-          change="+1.2%"
+          value={loading ? "..." : `${stats.totalRequests > 0 ? ((stats.successfulRequests / stats.totalRequests) * 100).toFixed(1) : 0}%`}
+          change=""
           changeType="positive"
         />
+      </div>
+
+      {/* Portal Breakdown */}
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h3 className="text-lg font-semibold mb-4">📡 Portal Usage Breakdown</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <PortalCard
+            name="Product Catalog"
+            icon="🔍"
+            stats={portalStats.catalog}
+            color="blue"
+            loading={loading}
+          />
+          <PortalCard
+            name="Parts Portal"
+            icon="⚙️"
+            stats={portalStats.parts}
+            color="green"
+            loading={loading}
+          />
+          <PortalCard
+            name="Home Products"
+            icon="🏠"
+            stats={portalStats.home_products}
+            color="purple"
+            loading={loading}
+          />
+        </div>
       </div>
 
       {/* Time Range Selector */}
@@ -325,6 +399,73 @@ function MetricRow({ label, value, icon }) {
         <span className="text-sm text-gray-700">{label}</span>
       </div>
       <span className="text-sm font-semibold text-gray-900">{value}</span>
+    </div>
+  )
+}
+
+function PortalCard({ name, icon, stats, color, loading }) {
+  const colorClasses = {
+    blue: 'from-blue-500 to-blue-600',
+    green: 'from-green-500 to-green-600',
+    purple: 'from-purple-500 to-purple-600'
+  }
+
+  if (loading || !stats) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-6 border-2 border-gray-200">
+        <div className="flex items-center space-x-3 mb-4">
+          <span className="text-3xl">{icon}</span>
+          <h4 className="text-lg font-semibold text-gray-900">{name}</h4>
+        </div>
+        <div className="text-center text-gray-500 py-4">Loading...</div>
+      </div>
+    )
+  }
+
+  const successRate = stats.total_requests > 0 
+    ? ((stats.successful_requests / stats.total_requests) * 100).toFixed(1) 
+    : 0
+
+  return (
+    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-lg p-6 text-white shadow-lg`}>
+      <div className="flex items-center space-x-3 mb-4">
+        <span className="text-3xl">{icon}</span>
+        <h4 className="text-lg font-semibold">{name}</h4>
+      </div>
+      
+      <div className="space-y-3">
+        <div className="flex justify-between items-center">
+          <span className="text-white/80">Total Requests</span>
+          <span className="text-2xl font-bold">{stats.total_requests.toLocaleString()}</span>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <span className="text-white/80">Success Rate</span>
+          <span className="text-xl font-semibold">{successRate}%</span>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <span className="text-white/80">Avg Response</span>
+          <span className="text-xl font-semibold">{stats.avg_response_time.toFixed(2)}s</span>
+        </div>
+        
+        <div className="mt-4 pt-3 border-t border-white/20">
+          <div className="flex justify-between text-sm">
+            <span className="text-white/80">✅ Success:</span>
+            <span className="font-medium">{stats.successful_requests}</span>
+          </div>
+          <div className="flex justify-between text-sm mt-1">
+            <span className="text-white/80">❌ Failed:</span>
+            <span className="font-medium">{stats.failed_requests}</span>
+          </div>
+        </div>
+        
+        {stats.last_used && (
+          <div className="mt-3 text-xs text-white/60">
+            Last used: {format(new Date(stats.last_used), 'MMM dd, HH:mm:ss')}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

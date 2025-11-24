@@ -103,6 +103,47 @@ ai_metrics = {
     }
 }
 
+# Portal-specific metrics tracking
+portal_metrics = {
+    "catalog": {  # /enrich endpoint
+        "total_requests": 0,
+        "successful_requests": 0,
+        "failed_requests": 0,
+        "total_response_time": 0.0,
+        "avg_response_time": 0.0,
+        "last_used": None
+    },
+    "parts": {  # /enrich-part endpoint
+        "total_requests": 0,
+        "successful_requests": 0,
+        "failed_requests": 0,
+        "total_response_time": 0.0,
+        "avg_response_time": 0.0,
+        "last_used": None
+    },
+    "home_products": {  # /enrich-home-product endpoint
+        "total_requests": 0,
+        "successful_requests": 0,
+        "failed_requests": 0,
+        "total_response_time": 0.0,
+        "avg_response_time": 0.0,
+        "last_used": None
+    }
+}
+
+def update_portal_metrics(portal_name: str, success: bool, response_time: float):
+    """Update metrics for a specific portal endpoint."""
+    metrics = portal_metrics[portal_name]
+    metrics["total_requests"] += 1
+    metrics["last_used"] = datetime.utcnow().isoformat()
+    
+    if success:
+        metrics["successful_requests"] += 1
+        metrics["total_response_time"] += response_time
+        metrics["avg_response_time"] = metrics["total_response_time"] / metrics["successful_requests"]
+    else:
+        metrics["failed_requests"] += 1
+
 def calculate_field_completeness(product_record: 'ProductRecord') -> float:
     """Calculate what percentage of optional fields are populated."""
     total_fields = 0
@@ -497,6 +538,33 @@ async def get_parts_ai_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
         "timestamp": datetime.utcnow().isoformat()
     }
 
+# Portal-specific Metrics endpoint
+@app.get("/portal-metrics")
+async def get_portal_metrics(x_api_key: str = Header(..., alias="X-API-KEY")):
+    """
+    Get portal-specific usage metrics for all three portals.
+    Tracks usage across Catalog, Parts, and Home Products portals.
+    Requires X-API-KEY header for authentication.
+    """
+    await verify_api_key(x_api_key)
+    
+    # Calculate totals
+    total_requests = sum(p["total_requests"] for p in portal_metrics.values())
+    total_successful = sum(p["successful_requests"] for p in portal_metrics.values())
+    total_failed = sum(p["failed_requests"] for p in portal_metrics.values())
+    
+    return {
+        "success": True,
+        "portals": portal_metrics,
+        "totals": {
+            "total_requests": total_requests,
+            "successful_requests": total_successful,
+            "failed_requests": total_failed,
+            "success_rate": (total_successful / total_requests * 100) if total_requests > 0 else 0
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
 # AI Performance Comparison endpoint
 @app.get("/ai-comparison")
 async def get_ai_comparison(x_api_key: str = Header(..., alias="X-API-KEY")):
@@ -584,9 +652,15 @@ async def enrich_product(
     # Verify API key
     await verify_api_key(x_api_key)
     
+    start_time = time.time()
+    success = False
+    
     try:
         # Call OpenAI to generate product data
         product_data = await generate_product_data(request.brand, request.model_number)
+        success = True
+        response_time = time.time() - start_time
+        update_portal_metrics("catalog", success, response_time)
         
         return EnrichResponse(
             success=True,
@@ -594,6 +668,8 @@ async def enrich_product(
         )
     
     except Exception as e:
+        response_time = time.time() - start_time
+        update_portal_metrics("catalog", success, response_time)
         return EnrichResponse(
             success=False,
             error=str(e)
@@ -627,6 +703,9 @@ async def enrich_appliance_part(
     # Verify API key
     await verify_api_key(x_api_key)
     
+    start_time = time.time()
+    success = False
+    
     try:
         # Import parts module functions
         from parts import (
@@ -649,6 +728,9 @@ async def enrich_appliance_part(
                 
                 # Update metrics
                 update_parts_metrics(provider_name, metrics, success=True)
+                success = True
+                response_time = time.time() - start_time
+                update_portal_metrics("parts", success, response_time)
                 
                 return PartEnrichResponse(
                     success=True,
@@ -667,6 +749,8 @@ async def enrich_appliance_part(
                 continue
         
         # All providers failed
+        response_time = time.time() - start_time
+        update_portal_metrics("parts", success, response_time)
         return PartEnrichResponse(
             success=False,
             error=f"All AI providers failed. Last error: {last_error}"
@@ -1090,12 +1174,17 @@ async def enrich_home_product_endpoint(
                 xai_client=xai_client
             )
         except Exception as fallback_error:
+            total_time = time.time() - start_time
+            update_portal_metrics("home_products", False, total_time)
             raise HTTPException(
                 status_code=500,
                 detail=f"All AI providers failed. Primary: {str(e)}, Fallback: {str(fallback_error)}"
             )
     
     total_time = time.time() - start_time
+    
+    # Update portal metrics
+    update_portal_metrics("home_products", True, total_time)
     
     return {
         "success": True,
