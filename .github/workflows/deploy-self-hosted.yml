@@ -11,27 +11,7 @@ env:
   DEPLOY_PATH: /var/www/catalogbot
 
 jobs:
-  # test:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     
-  #     - name: Setup Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: '3.11'
-  #     
-  #     - name: Install Dependencies
-  #       run: |
-  #         pip install -r requirements.txt
-  #         pip install pytest
-  #     
-  #     - name: Run Tests
-  #       run: |
-  #         python -m pytest test_api.py -v
-  
   deploy-backend:
-    # needs: test
     runs-on: ubuntu-latest
     
     steps:
@@ -46,45 +26,22 @@ jobs:
         run: |
           ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
       
-      - name: Deploy Backend via Docker Compose
+      - name: Deploy Backend
         run: |
           ssh ${{ secrets.SERVER_USER }}@${{ env.SERVER_HOST }} << 'ENDSSH'
             cd ${{ env.DEPLOY_PATH }}
             
-            # Pull latest code
-            git pull origin main
+            # Pull latest code from production branch
+            git pull origin production
             
-            # Create .env if not exists
-            if [ ! -f .env ]; then
-              echo "Creating .env file..."
-              cat > .env << 'EOF'
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-          XAI_API_KEY=${{ secrets.XAI_API_KEY }}
-          API_KEY=catbot123
-          DATABASE_URL=postgresql://catalogbot:${{ secrets.DB_PASSWORD }}@postgres:5432/catalogbot
-          REDIS_URL=redis://redis:6379/0
-          EOF
-            fi
-            
-            # Deploy with Docker Compose
-            docker-compose down
-            docker-compose pull
-            docker-compose up -d --build
-            
-            # Wait for services
-            sleep 10
-            
-            # Run database migrations
-            docker-compose exec -T backend alembic upgrade head
-            
-            # Check health
-            docker-compose ps
+            # Restart backend service (Docker already running)
+            docker restart catalogbot-api
           ENDSSH
       
       - name: Health Check
         run: |
           sleep 5
-          curl -f https://api.${{ env.SERVER_HOST }}/health || exit 1
+          curl -f https://api.cxc-ai.com/health || exit 1
           echo "✅ Backend deployed successfully!"
   
   deploy-frontend:
@@ -131,7 +88,7 @@ jobs:
       
       - name: Frontend Health Check
         run: |
-          curl -f https://${{ env.SERVER_HOST }} || exit 1
+          curl -f https://cxc-ai.com || exit 1
           echo "✅ Frontend deployed successfully!"
   
   notify:
