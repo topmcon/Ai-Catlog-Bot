@@ -436,13 +436,14 @@ async def enrich_home_product_with_ai(
                     {"role": "system", "content": "You are a product data enrichment specialist. Return only valid JSON."},
                     {"role": "user", "content": prompt}
                 ],
+                response_format={"type": "json_object"},
                 temperature=0.3,
                 max_tokens=4000
             )
             content = response.choices[0].message.content.strip()
         elif provider == "xai" and xai_client:
             response = xai_client.chat.completions.create(
-                model="grok-beta",
+                model="grok-2-latest",
                 messages=[
                     {"role": "system", "content": "You are a product data enrichment specialist. Return only valid JSON."},
                     {"role": "user", "content": prompt}
@@ -454,11 +455,14 @@ async def enrich_home_product_with_ai(
         else:
             raise Exception(f"Invalid provider or client not available: {provider}")
         
-        # Clean JSON response
-        if content.startswith("```json"):
-            content = content.replace("```json", "").replace("```", "").strip()
-        elif content.startswith("```"):
-            content = content.replace("```", "").strip()
+        # Clean JSON response - remove markdown code blocks and whitespace
+        if "```json" in content:
+            content = content.split("```json")[1].split("```")[0].strip()
+        elif "```" in content:
+            content = content.split("```")[1].split("```")[0].strip()
+        
+        # Strip all leading/trailing whitespace and newlines
+        content = content.strip()
         
         # Parse JSON
         enriched_data = json.loads(content)
