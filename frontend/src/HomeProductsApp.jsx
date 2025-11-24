@@ -43,7 +43,9 @@ function HomeProductsApp() {
           ai_provider: data.metadata?.ai_provider || data.data?.ai_provider,
           confidence_score: data.metadata?.completeness || data.data?.ai_enrichment?.completeness_score || data.data?.confidence_score
         }
+        console.log('Raw API response:', JSON.stringify(data, null, 2))
         console.log('Merged product data:', mergedData)
+        console.log('productData state will be set to:', mergedData)
         setProductData(mergedData)
       } else {
         setError(data.error || 'Failed to enrich product data')
