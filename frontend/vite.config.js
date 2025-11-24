@@ -9,7 +9,8 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
-        parts: resolve(__dirname, 'parts.html')
+        parts: resolve(__dirname, 'parts.html'),
+        homeProducts: resolve(__dirname, 'home-products.html')
       }
     }
   },

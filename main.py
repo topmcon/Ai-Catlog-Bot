@@ -19,6 +19,14 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Import home products module
+from home_products import (
+    HomeProductRecord,
+    enrich_home_product_with_ai,
+    home_products_metrics,
+    calculate_home_product_completeness
+)
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Catalog-BOT API",
@@ -1017,6 +1025,122 @@ Return comprehensive, verified product data in the specified JSON format."""
     )
     
     return product_record
+
+# ============================================================================
+# HOME PRODUCTS ENDPOINTS (Plumbing, Kitchen, Lighting, Bath)
+# ============================================================================
+
+class HomeProductEnrichRequest(BaseModel):
+    """Request model for home product enrichment"""
+    model_number: str = Field(..., description="Product model number (REQUIRED)")
+    brand: Optional[str] = Field(None, description="Brand name (optional, helps identification)")
+    description: Optional[str] = Field(None, description="Brief description (optional, helps identification)")
+
+@app.post("/enrich-home-product")
+async def enrich_home_product_endpoint(
+    request: HomeProductEnrichRequest,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Enrich home product data (Plumbing, Kitchen, Lighting, Bath, Fans, Hardware, Outdoor, HVAC)
+    using Master Product Data Schema v1.0 (Sections A-L)
+    
+    Requires: model_number (primary identifier)
+    Optional: brand, description (helpers for identification)
+    """
+    # Verify API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    # Validate model number is provided
+    if not request.model_number or not request.model_number.strip():
+        raise HTTPException(status_code=400, detail="Model number is required")
+    
+    start_time = time.time()
+    
+    # Determine which AI provider to use (primary: OpenAI, fallback: xAI)
+    primary_provider = "openai"
+    fallback_provider = "xai"
+    
+    enriched_data = None
+    provider_used = None
+    ai_response_time = 0
+    
+    # Try primary provider first
+    try:
+        enriched_data, provider_used, ai_response_time = await enrich_home_product_with_ai(
+            model_number=request.model_number,
+            brand=request.brand,
+            description=request.description,
+            provider=primary_provider,
+            openai_client=openai_client,
+            xai_client=xai_client
+        )
+    except Exception as e:
+        print(f"Primary AI provider ({primary_provider}) failed: {str(e)}")
+        
+        # Try fallback provider
+        try:
+            enriched_data, provider_used, ai_response_time = await enrich_home_product_with_ai(
+                model_number=request.model_number,
+                brand=request.brand,
+                description=request.description,
+                provider=fallback_provider,
+                openai_client=openai_client,
+                xai_client=xai_client
+            )
+        except Exception as fallback_error:
+            raise HTTPException(
+                status_code=500,
+                detail=f"All AI providers failed. Primary: {str(e)}, Fallback: {str(fallback_error)}"
+            )
+    
+    total_time = time.time() - start_time
+    
+    return {
+        "success": True,
+        "data": enriched_data,
+        "metadata": {
+            "ai_provider": provider_used,
+            "response_time": round(total_time, 2),
+            "ai_processing_time": round(ai_response_time, 2),
+            "completeness": round(enriched_data.get("confidence_score", 0), 2),
+            "model_number": request.model_number,
+            "brand": request.brand,
+            "description": request.description
+        }
+    }
+
+@app.get("/home-products-ai-metrics")
+async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):
+    """Get AI performance metrics for home products enrichment"""
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    metrics_summary = {}
+    for provider, data in home_products_metrics.items():
+        avg_completeness = (
+            sum(data["completeness_scores"]) / len(data["completeness_scores"])
+            if data["completeness_scores"] else 0
+        )
+        avg_response_time = (
+            data["total_time"] / data["requests"]
+            if data["requests"] > 0 else 0
+        )
+        
+        metrics_summary[provider] = {
+            "total_requests": data["requests"],
+            "successful": data["successful"],
+            "failed": data["failed"],
+            "success_rate": f"{(data['successful'] / data['requests'] * 100) if data['requests'] > 0 else 0:.2f}%",
+            "avg_response_time": f"{avg_response_time:.3f}s",
+            "avg_completeness": f"{avg_completeness:.2f}%"
+        }
+    
+    return {
+        "metrics": metrics_summary,
+        "timestamp": datetime.utcnow().isoformat()
+    }
 
 # Error handlers
 @app.exception_handler(HTTPException)
