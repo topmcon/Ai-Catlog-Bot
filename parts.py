@@ -151,6 +151,12 @@ class PartRecord(BaseModel):
 
 PARTS_ENRICHMENT_PROMPT = """You are an appliance parts data enrichment specialist. Given a part number and brand, provide comprehensive technical and commercial information.
 
+⚠️ CRITICAL MSRP VALIDATION RULE:
+- MSRP/Price is ONLY valid if you find at least 2 independent sources with the SAME price
+- If only 1 source has a price, or if sources show different prices, set price to null
+- Sources include: OEM websites, authorized parts distributors, repair manuals, etc.
+- Price must match exactly between sources to be considered valid
+
 Part Number: {part_number}
 Brand: {brand}
 

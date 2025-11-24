@@ -265,6 +265,19 @@ INPUT DATA:
 - Brand: {brand} (if provided - helps identification)
 - Description: {description} (if provided - helps identification)
 
+🔵 PRIORITIZATION RULE - FERGUSON DATA FIRST:
+- When researching products, CHECK fergusonhome.com FIRST as a primary source
+- Ferguson is our partner and carries many of our products
+- Their data should be prioritized for specifications, pricing, and product details
+- Use Ferguson data as the baseline when available, supplement with other sources
+
+⚠️ CRITICAL MSRP VALIDATION RULE:
+- MSRP is ONLY valid if you find at least 2 independent sources with the SAME price
+- If only 1 source has a price (including Ferguson), or if sources show different prices, set msrp_price to null
+- Sources include: manufacturer website, fergusonhome.com, authorized retailers, product spec sheets
+- Price must match exactly between sources to be considered valid
+- Note in detailed_description if pricing could not be verified due to single source or conflicting sources
+
 YOUR TASK:
 Using the model number as the primary identifier (and brand/description as helpers if provided), research and enrich this product with comprehensive details following the Master Product Data Schema v1.0 (Sections A through L).
 

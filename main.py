@@ -869,6 +869,12 @@ async def _generate_with_provider(brand: str, model_number: str, provider_name: 
     system_prompt = """You are an expert product research assistant specializing in appliances and consumer products. 
 Your task is to research and provide comprehensive, accurate product information based on the brand and model number provided.
 
+⚠️ CRITICAL MSRP VALIDATION RULE:
+- MSRP is ONLY valid if you find at least 2 independent sources with the SAME price
+- If only 1 source has a price, or if sources show different prices, set MSRP to null and note this in the description
+- Sources include: manufacturer website, authorized retailers, product spec sheets, etc.
+- Price must match exactly between sources to be considered valid
+
 You must return ONLY valid JSON matching this comprehensive structure for appliances:
 
 {
