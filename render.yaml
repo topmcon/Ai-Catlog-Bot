@@ -3,12 +3,16 @@ services:
     name: catalog-bot
     env: python
     region: ohio
-    plan: free
+    plan: starter
     branch: main
     runtime: python
     pythonVersion: "3.11.0"
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    disk:
+      name: catalog-bot-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
     envVars:
       - key: OPENAI_API_KEY
         sync: false

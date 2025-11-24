@@ -20,8 +20,11 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# Metrics persistence file
-METRICS_FILE = "portal_metrics.json"
+# Metrics persistence file - use persistent disk if available (Render)
+DATA_DIR = os.getenv("DATA_DIR", "/opt/render/project/src/data")
+if not os.path.exists(DATA_DIR):
+    os.makedirs(DATA_DIR, exist_ok=True)
+METRICS_FILE = os.path.join(DATA_DIR, "portal_metrics.json")
 
 # Import home products module
 from home_products import (
