@@ -37,7 +37,12 @@ function HomeProductsApp() {
       const data = await response.json()
 
       if (data.success) {
-        setProductData(data.data)
+        // Store both data and metadata for display
+        setProductData({
+          ...data.data,
+          ai_provider: data.metadata?.ai_provider,
+          confidence_score: data.metadata?.completeness || data.data.ai_enrichment?.completeness_score
+        })
       } else {
         setError(data.error || 'Failed to enrich product data')
       }
