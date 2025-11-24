@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { API_URL } from '../config/api'
+import { API_URL, FRONTEND_URL } from '../config/api'
 
 export default function ServerControl() {
   const [backendStatus, setBackendStatus] = useState('checking')

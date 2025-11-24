@@ -5,9 +5,9 @@ export default function SystemStatus() {
   const [systemChecks, setSystemChecks] = useState({
     backend: { status: 'checking', message: '', lastChecked: null },
     openai: { status: 'checking', message: '', lastChecked: null },
+    xai: { status: 'checking', message: '', lastChecked: null },
     frontend: { status: 'checking', message: '', lastChecked: null },
-    apiAuth: { status: 'checking', message: '', lastChecked: null },
-    cors: { status: 'checking', message: '', lastChecked: null }
+    apiAuth: { status: 'checking', message: '', lastChecked: null }
   })
   
   const [isRunningTests, setIsRunningTests] = useState(false)
@@ -22,8 +22,9 @@ export default function SystemStatus() {
   const runAllChecks = async () => {
     await checkBackend()
     await checkOpenAI()
+    await checkXAI()
     await checkFrontend()
-    await checkCORS()
+    await checkAPIAuth()
   }
 
   const checkBackend = async () => {
@@ -69,12 +70,12 @@ export default function SystemStatus() {
       const response = await fetch(`${API_URL}/health`, { method: 'GET' })
       const data = await response.json()
       
-      if (data.openai_configured === true) {
+      if (data.ai_providers?.openai?.enabled === true) {
         setSystemChecks(prev => ({
           ...prev,
           openai: {
             status: 'healthy',
-            message: 'OpenAI API key configured',
+            message: `OpenAI ${data.ai_providers.openai.model} - Active`,
             lastChecked: new Date().toISOString()
           }
         }))
@@ -83,7 +84,7 @@ export default function SystemStatus() {
           ...prev,
           openai: {
             status: 'warning',
-            message: 'OpenAI API key not configured',
+            message: 'OpenAI not configured',
             lastChecked: new Date().toISOString()
           }
         }))
@@ -111,15 +112,26 @@ export default function SystemStatus() {
     }))
   }
 
-  const checkCORS = async () => {
+  const checkXAI = async () => {
     try {
-      const response = await fetch(`${API_URL}/`, { method: 'GET' })
-      if (response.ok) {
+      const response = await fetch(`${API_URL}/health`, { method: 'GET' })
+      const data = await response.json()
+      
+      if (data.ai_providers?.xai?.enabled === true) {
         setSystemChecks(prev => ({
           ...prev,
-          cors: {
+          xai: {
             status: 'healthy',
-            message: 'CORS configured correctly',
+            message: `xAI ${data.ai_providers.xai.model} - Active`,
+            lastChecked: new Date().toISOString()
+          }
+        }))
+      } else {
+        setSystemChecks(prev => ({
+          ...prev,
+          xai: {
+            status: 'warning',
+            message: 'xAI not configured (backup)',
             lastChecked: new Date().toISOString()
           }
         }))
@@ -127,9 +139,48 @@ export default function SystemStatus() {
     } catch (error) {
       setSystemChecks(prev => ({
         ...prev,
-        cors: {
-          status: 'warning',
-          message: 'CORS may need configuration',
+        xai: {
+          status: 'error',
+          message: 'Cannot verify xAI status',
+          lastChecked: new Date().toISOString()
+        }
+      }))
+    }
+  }
+
+  const checkAPIAuth = async () => {
+    try {
+      const response = await fetch(`${API_URL}/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brand: 'Test', model_number: 'Test' })
+      })
+      
+      if (response.status === 401) {
+        setSystemChecks(prev => ({
+          ...prev,
+          apiAuth: {
+            status: 'healthy',
+            message: 'API authentication working',
+            lastChecked: new Date().toISOString()
+          }
+        }))
+      } else {
+        setSystemChecks(prev => ({
+          ...prev,
+          apiAuth: {
+            status: 'warning',
+            message: 'Authentication check inconclusive',
+            lastChecked: new Date().toISOString()
+          }
+        }))
+      }
+    } catch (error) {
+      setSystemChecks(prev => ({
+        ...prev,
+        apiAuth: {
+          status: 'error',
+          message: 'Cannot verify API auth',
           lastChecked: new Date().toISOString()
         }
       }))
@@ -329,10 +380,10 @@ export default function SystemStatus() {
           <StatusCard
             key={key}
             title={key === 'backend' ? 'Backend API' :
-                   key === 'openai' ? 'OpenAI Integration' :
+                   key === 'openai' ? 'OpenAI (Primary)' :
+                   key === 'xai' ? 'xAI Grok (Backup)' :
                    key === 'frontend' ? 'Frontend Portal' :
-                   key === 'apiAuth' ? 'API Authentication' :
-                   'CORS Configuration'}
+                   'API Authentication'}
             status={check.status}
             message={check.message}
             lastChecked={check.lastChecked}
@@ -474,22 +525,22 @@ export default function SystemStatus() {
           <QuickAction
             icon="📊"
             label="View Metrics"
-            onClick={() => window.location.href = '/usage'}
+            onClick={() => window.location.href = '#/usage'}
           />
           <QuickAction
             icon="⚙️"
             label="Configuration"
-            onClick={() => window.location.href = '/config'}
+            onClick={() => window.location.href = '#/config'}
           />
           <QuickAction
             icon="📋"
             label="View Logs"
-            onClick={() => window.location.href = '/logs'}
+            onClick={() => window.location.href = '#/logs'}
           />
           <QuickAction
             icon="🧪"
             label="API Testing"
-            onClick={() => window.location.href = '/api-testing'}
+            onClick={() => window.location.href = '#/api-testing'}
           />
         </div>
       </div>
