@@ -25,14 +25,17 @@ class CoreIdentification(BaseModel):
     manufacturer: Optional[str] = Field(None, description="OEM manufacturer (if different)")
     part_name: Optional[str] = Field(None, description="Clear human-friendly name")
     part_number: Optional[str] = Field(None, description="OEM part number (MPN)")
+    part_title: Optional[str] = Field(None, description="SEO-friendly title")
     alternate_part_numbers: Optional[List[str]] = Field(None, description="List of OEM superseded or alternate numbers")
     upc: Optional[str] = Field(None, description="UPC/GTIN")
     condition: Optional[str] = Field(None, description="New OEM / New / Refurbished / Open-Box")
     is_oem: Optional[bool] = Field(None, description="Whether this is genuine OEM")
     price: Optional[str] = Field(None, description="Part price")
-    price_confidence: Optional[str] = Field(None, description="Price confidence: verified/single-source/conflicting/null")
-    price_source_count: Optional[int] = Field(None, description="Number of price sources found (0-3+)")
+    price_confidence: Optional[str] = Field(None, description="Price confidence: verified/null")
+    price_sources: Optional[List[str]] = Field(None, description="Actual source names (oem, partselect, repairclinic, etc.)")
+    price_source_count: Optional[int] = Field(None, description="Number of price sources found (0, 2, 3+)")
     price_verified: Optional[bool] = Field(None, description="True if 2+ matching sources, false otherwise")
+    verified_by: Optional[str] = Field(None, description="AI provider that enriched this data")
 
 
 class ProductTitle(BaseModel):
@@ -340,6 +343,35 @@ def enrich_part_with_ai(part_number: str, brand: str, provider: str = "openai") 
         
         # Parse JSON
         part_data = json.loads(content)
+        
+        # ENFORCE STRICT PRICING VALIDATION RULES
+        if 'core_identification' in part_data:
+            ci = part_data['core_identification']
+            price_sources = ci.get('price_sources', [])
+            price_source_count = len(price_sources) if price_sources else 0
+            
+            # Rule: Only accept price if AI provided 2+ named sources
+            if price_source_count < 2:
+                ci['price'] = None
+                ci['price_confidence'] = None
+                ci['price_sources'] = []
+                ci['price_source_count'] = 0
+                ci['price_verified'] = False
+            else:
+                # Validate authorized sources
+                authorized = ["oem", "manufacturer", "appliancepartspros", "partselect", "repairclinic", "reliableparts", "ferguson", "ajmadison"]
+                valid_sources = [s.lower().replace(" ", "") for s in price_sources if any(auth in s.lower().replace(" ", "") for auth in authorized)]
+                
+                if len(valid_sources) < 2:
+                    ci['price'] = None
+                    ci['price_confidence'] = None
+                    ci['price_sources'] = []
+                    ci['price_source_count'] = 0
+                    ci['price_verified'] = False
+                else:
+                    ci['price_confidence'] = "verified"
+                    ci['price_source_count'] = len(valid_sources)
+                    ci['price_verified'] = True
         
         # Create PartRecord
         part_record = PartRecord(**part_data)

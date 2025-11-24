@@ -316,6 +316,7 @@ class VerifiedInformation(BaseModel):
     release_year: Optional[str] = None
     msrp_price: Optional[str] = None
     msrp_confidence: Optional[str] = None
+    msrp_sources: Optional[List[str]] = None
     msrp_source_count: Optional[int] = None
     msrp_verified: Optional[bool] = None
     verified_by: str = "AI Enrichment"
@@ -873,19 +874,36 @@ async def _generate_with_provider(brand: str, model_number: str, provider_name: 
     system_prompt = """You are an expert product research assistant specializing in appliances and consumer products. 
 Your task is to research and provide comprehensive, accurate product information based on the brand and model number provided.
 
-⚠️ ENHANCED MSRP VALIDATION WITH CONFIDENCE TRACKING:
+⚠️ STRICT MSRP VALIDATION - AUTHORITATIVE SOURCES REQUIRED:
 
-PRICING RULES:
-1. **2+ sources with SAME price** → Set MSRP + confidence: "verified" + source_count: 2+ + verified: true
-2. **1 source only** → Set MSRP + confidence: "single-source" + source_count: 1 + verified: false
-3. **2+ sources CONFLICTING** → Set MSRP to lower price + confidence: "conflicting" + source_count: 2+ + verified: false
-4. **No sources found** → Set MSRP: null + confidence: null + source_count: 0 + verified: false
+**CRITICAL: AI must provide actual source names, not just count sources**
 
-SOURCES: manufacturer website, authorized retailers, product spec sheets, distributor sites, etc.
+AUTHORIZED SOURCES (AI must check these in order):
+1. Manufacturer's official website (vikingrange.com, geappliances.com, etc.)
+2. AJ Madison (ajmadison.com)
+3. Ferguson (ferguson.com)
+4. Best Buy (bestbuy.com)
+5. Costco (costco.com)
+6. Home Depot (homedepot.com)
+7. Lowes (lowes.com)
+
+PRICING RULES (STRICT - Better NULL than WRONG):
+1. **Manufacturer website + 1 authorized retailer MATCH** → msrp_price: "$X,XXX", confidence: "verified", sources: ["manufacturer", "retailer_name"], source_count: 2, verified: true
+2. **2+ authorized retailers MATCH (no manufacturer)** → msrp_price: "$X,XXX", confidence: "verified", sources: ["retailer1", "retailer2"], source_count: 2+, verified: true
+3. **Single authorized source only** → msrp_price: null, confidence: null, sources: [], source_count: 0, verified: false (DO NOT use single source)
+4. **Sources conflict** → msrp_price: null, confidence: null, sources: [], source_count: 0, verified: false (DO NOT guess)
+5. **No authorized sources found** → msrp_price: null, confidence: null, sources: [], source_count: 0, verified: false
+
+**IMPORTANT**: 
+- AI must list actual source names in the "msrp_sources" array
+- Only return MSRP if 2+ authorized sources agree on exact price
+- If uncertain or only 1 source found → return null
+- Do NOT fabricate source counts - list actual sources checked
 
 ADDITIONAL FIELDS TO INCLUDE:
-- "msrp_confidence": "verified" | "single-source" | "conflicting" | null
-- "msrp_source_count": number of sources found (0, 1, 2, 3+)
+- "msrp_confidence": "verified" | null
+- "msrp_sources": ["actual", "source", "names"]
+- "msrp_source_count": number (0, 2, 3+)
 - "msrp_verified": true only if 2+ matching sources, false otherwise
 
 You must return ONLY valid JSON matching this comprehensive structure for appliances:
@@ -902,9 +920,10 @@ You must return ONLY valid JSON matching this comprehensive structure for applia
   "country_of_origin": "manufacturing country",
   "release_year": "year released",
   "msrp_price": "$XXX.XX or null",
-  "msrp_confidence": "verified or single-source or conflicting or null",
-  "msrp_source_count": 0,
-  "msrp_verified": true,
+  "msrp_confidence": "verified or null",
+  "msrp_sources": ["source1", "source2"] or [],
+  "msrp_source_count": 0 or 2 or 3,
+  "msrp_verified": true or false,
   
   "product_height": "product height with units",
   "product_width": "product width with units",
@@ -1043,6 +1062,35 @@ Return comprehensive, verified product data in the specified JSON format."""
     # Parse AI response
     raw_data = json.loads(response.choices[0].message.content)
     
+    # ENFORCE STRICT MSRP VALIDATION RULES
+    msrp_sources = raw_data.get("msrp_sources", [])
+    msrp_source_count = len(msrp_sources) if msrp_sources else 0
+    
+    # Rule: Only accept MSRP if AI provided 2+ named sources
+    if msrp_source_count < 2:
+        raw_data["msrp_price"] = None
+        raw_data["msrp_confidence"] = None
+        raw_data["msrp_sources"] = []
+        raw_data["msrp_source_count"] = 0
+        raw_data["msrp_verified"] = False
+    else:
+        # Validate that sources are from authorized list
+        authorized = ["manufacturer", "ajmadison", "ferguson", "bestbuy", "costco", "homedepot", "lowes"]
+        valid_sources = [s.lower().replace(" ", "") for s in msrp_sources if any(auth in s.lower().replace(" ", "") for auth in authorized)]
+        
+        if len(valid_sources) < 2:
+            # Not enough authorized sources
+            raw_data["msrp_price"] = None
+            raw_data["msrp_confidence"] = None
+            raw_data["msrp_sources"] = []
+            raw_data["msrp_source_count"] = 0
+            raw_data["msrp_verified"] = False
+        else:
+            # Valid MSRP with 2+ authorized sources
+            raw_data["msrp_confidence"] = "verified"
+            raw_data["msrp_source_count"] = len(valid_sources)
+            raw_data["msrp_verified"] = True
+    
     # Map to our structured ProductRecord model
     product_record = ProductRecord(
         verified_information=VerifiedInformation(
@@ -1058,6 +1106,7 @@ Return comprehensive, verified product data in the specified JSON format."""
             release_year=raw_data.get("release_year"),
             msrp_price=raw_data.get("msrp_price"),
             msrp_confidence=raw_data.get("msrp_confidence"),
+            msrp_sources=raw_data.get("msrp_sources"),
             msrp_source_count=raw_data.get("msrp_source_count"),
             msrp_verified=raw_data.get("msrp_verified"),
             verified_by=provider["name"]

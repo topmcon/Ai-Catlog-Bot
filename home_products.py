@@ -26,9 +26,6 @@ class ProductIdentity(BaseModel):
     subcategory: Optional[str] = Field(None, description="e.g., Widespread/Single-hole/etc.")
     series_collection: Optional[str] = Field(None, description="e.g., Delta Trinsic, Kohler Artifacts")
     msrp_price: Optional[str] = Field(None, description="Manufacturer's suggested retail price")
-    msrp_confidence: Optional[str] = Field(None, description="Price confidence: verified/single-source/conflicting/null")
-    msrp_source_count: Optional[int] = Field(None, description="Number of price sources found (0-3+)")
-    msrp_verified: Optional[bool] = Field(None, description="True if 2+ matching sources, false otherwise")
 
 # ============================================================================
 # SECTION B — PHYSICAL ATTRIBUTES
@@ -274,24 +271,26 @@ INPUT DATA:
 - Their data should be prioritized for specifications, pricing, and product details
 - Use Ferguson data as the baseline when available, supplement with other sources
 
-⚠️ ENHANCED MSRP VALIDATION WITH CONFIDENCE TRACKING:
+⚠️ STRICT MSRP VALIDATION - AUTHORITATIVE SOURCES REQUIRED:
 
-PRICING RULES (Ferguson data still prioritized as baseline):
-1. **Ferguson + 1+ other source MATCH** → Set MSRP + confidence: "verified" + source_count: 2+ + verified: true
-2. **2+ non-Ferguson sources MATCH** → Set MSRP + confidence: "verified" + source_count: 2+ + verified: true
-3. **Ferguson ONLY (no other sources)** → Set MSRP + confidence: "single-source" + source_count: 1 + verified: false
-4. **1 non-Ferguson source only** → Set MSRP + confidence: "single-source" + source_count: 1 + verified: false
-5. **Ferguson + other sources CONFLICT** → Set MSRP to Ferguson price + confidence: "conflicting" + source_count: 2+ + verified: false
-6. **2+ sources CONFLICT (no Ferguson)** → Set MSRP to lowest + confidence: "conflicting" + source_count: 2+ + verified: false
-7. **No sources found** → Set msrp_price: null + confidence: null + source_count: 0 + verified: false
+**CRITICAL: You must provide actual source names in msrp_sources array**
 
-SOURCES: fergusonhome.com (priority), manufacturer website, authorized retailers, product spec sheets
+AUTHORIZED SOURCES (check in this order):
+1. Ferguson (fergusonhome.com) - PRIORITY SOURCE
+2. Manufacturer's official website
+3. AJ Madison (ajmadison.com)
+4. Best Buy (bestbuy.com)
+5. Costco (costco.com)
+6. Home Depot (homedepot.com)
+7. Lowes (lowes.com)
 
-ADD TO product_identity SECTION:
-- "msrp_confidence": "verified" | "single-source" | "conflicting" | null
-- "msrp_source_count": number of sources found (0, 1, 2, 3+)
-- "msrp_verified": true only if 2+ matching sources, false otherwise
-- Note confidence level in ai_enrichment.detailed_description
+PRICING RULES (STRICT - Better NULL than WRONG):
+- **2+ authorized sources with EXACT MATCH** → Set msrp_price, confidence: "verified", list source names in msrp_sources array
+- **Single source only** → msrp_price: null, msrp_sources: []
+- **Sources conflict** → msrp_price: null, msrp_sources: []
+- **No authorized sources** → msrp_price: null, msrp_sources: []
+
+IMPORTANT: List actual source names like ["ferguson", "homedepot"] in the msrp_sources field
 
 YOUR TASK:
 Using the model number as the primary identifier (and brand/description as helpers if provided), research and enrich this product with comprehensive details following the Master Product Data Schema v1.0 (Sections A through L).
@@ -313,7 +312,7 @@ RESPONSE FORMAT:
 Return a complete JSON object matching the HomeProductRecord schema with all 12 sections (A-L):
 
 {{
-  "product_identity": {
+  "product_identity": {{
     "brand": "...",
     "model_number": "...",
     "mpn": "...",
@@ -325,10 +324,7 @@ Return a complete JSON object matching the HomeProductRecord schema with all 12 
     "category": "...",
     "subcategory": "...",
     "series_collection": "...",
-    "msrp_price": "...",
-    "msrp_confidence": "verified or single-source or conflicting or null",
-    "msrp_source_count": 0,
-    "msrp_verified": true
+    "msrp_price": "..."
   }},
   "dimensions": {{ ... }},
   "material_construction": {{ ... }},
@@ -466,6 +462,38 @@ async def enrich_home_product_with_ai(
         
         # Parse JSON
         enriched_data = json.loads(content)
+        
+        # ENFORCE STRICT MSRP VALIDATION RULES
+        if 'product_identity' in enriched_data:
+            pi = enriched_data['product_identity']
+            msrp_sources = pi.get('msrp_sources', [])
+            msrp_source_count = len(msrp_sources) if msrp_sources else 0
+            
+            # Rule: Only accept MSRP if AI provided 2+ named sources
+            if msrp_source_count < 2:
+                pi['msrp_price'] = None
+                pi['msrp_confidence'] = None
+                pi['msrp_sources'] = []
+                pi['msrp_source_count'] = 0
+                pi['msrp_verified'] = False
+            else:
+                # Validate authorized sources
+                authorized = ["ferguson", "manufacturer", "ajmadison", "bestbuy", "costco", "homedepot", "lowes"]
+                valid_sources = [s.lower().replace(" ", "").replace(".", "") for s in msrp_sources if any(auth in s.lower().replace(" ", "").replace(".", "") for auth in authorized)]
+                
+                if len(valid_sources) < 2:
+                    pi['msrp_price'] = None
+                    pi['msrp_confidence'] = None
+                    pi['msrp_sources'] = []
+                    pi['msrp_source_count'] = 0
+                    pi['msrp_verified'] = False
+                else:
+                    pi['msrp_confidence'] = "verified"
+                    pi['msrp_source_count'] = len(valid_sources)
+                    pi['msrp_verified'] = True
+            
+            # Set verified_by field
+            pi['verified_by'] = f"{provider.title()} {('gpt-4o-mini' if provider == 'openai' else 'grok-2-latest')}"
         
         # Add metadata
         enriched_data["enriched_at"] = datetime.utcnow().isoformat()
