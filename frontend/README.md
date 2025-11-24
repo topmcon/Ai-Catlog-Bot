@@ -44,7 +44,6 @@ npm run preview  # Preview production build
 ### Option 1: GitHub Integration (Easiest)
 
 1. Push code to GitHub
-2. Go to [vercel.com](https://vercel.com)
 3. Click "Import Project"
 4. Select your repository
 5. Set environment variables:
@@ -55,9 +54,7 @@ npm run preview  # Preview production build
 ### Option 2: Vercel CLI
 
 ```bash
-npm i -g vercel
 cd /workspaces/Ai-Catlog-Bot
-vercel
 ```
 
 Follow the prompts and add environment variables when asked.

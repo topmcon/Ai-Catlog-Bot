@@ -4,7 +4,7 @@ export default function ConfigManager() {
   const [config, setConfig] = useState({
     openaiApiKey: '',
     catalogApiKey: '',
-    corsOrigins: ['http://localhost:3000', 'http://localhost:5173', 'https://*.vercel.app'],
+    corsOrigins: ['http://localhost:3000', 'http://localhost:5173', 'https://*.cxc-ai.com'],
     rateLimit: 100,
     maxTokens: 4000,
     temperature: 0.7,
@@ -52,7 +52,7 @@ export default function ConfigManager() {
     const defaultConfig = {
       openaiApiKey: '',
       catalogApiKey: '',
-      corsOrigins: ['http://localhost:3000', 'http://localhost:5173', 'https://*.vercel.app'],
+      corsOrigins: ['http://localhost:3000', 'http://localhost:5173', 'https://*.cxc-ai.com'],
       rateLimit: 100,
       maxTokens: 4000,
       temperature: 0.7,
