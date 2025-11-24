@@ -314,6 +314,10 @@ class VerifiedInformation(BaseModel):
     mpn: Optional[str] = None
     country_of_origin: Optional[str] = None
     release_year: Optional[str] = None
+    msrp_price: Optional[str] = None
+    msrp_confidence: Optional[str] = None
+    msrp_source_count: Optional[int] = None
+    msrp_verified: Optional[bool] = None
     verified_by: str = "AI Enrichment"
 
 class ProductDimensions(BaseModel):
@@ -869,11 +873,20 @@ async def _generate_with_provider(brand: str, model_number: str, provider_name: 
     system_prompt = """You are an expert product research assistant specializing in appliances and consumer products. 
 Your task is to research and provide comprehensive, accurate product information based on the brand and model number provided.
 
-⚠️ CRITICAL MSRP VALIDATION RULE:
-- MSRP is ONLY valid if you find at least 2 independent sources with the SAME price
-- If only 1 source has a price, or if sources show different prices, set MSRP to null and note this in the description
-- Sources include: manufacturer website, authorized retailers, product spec sheets, etc.
-- Price must match exactly between sources to be considered valid
+⚠️ ENHANCED MSRP VALIDATION WITH CONFIDENCE TRACKING:
+
+PRICING RULES:
+1. **2+ sources with SAME price** → Set MSRP + confidence: "verified" + source_count: 2+ + verified: true
+2. **1 source only** → Set MSRP + confidence: "single-source" + source_count: 1 + verified: false
+3. **2+ sources CONFLICTING** → Set MSRP to lower price + confidence: "conflicting" + source_count: 2+ + verified: false
+4. **No sources found** → Set MSRP: null + confidence: null + source_count: 0 + verified: false
+
+SOURCES: manufacturer website, authorized retailers, product spec sheets, distributor sites, etc.
+
+ADDITIONAL FIELDS TO INCLUDE:
+- "msrp_confidence": "verified" | "single-source" | "conflicting" | null
+- "msrp_source_count": number of sources found (0, 1, 2, 3+)
+- "msrp_verified": true only if 2+ matching sources, false otherwise
 
 You must return ONLY valid JSON matching this comprehensive structure for appliances:
 
@@ -888,6 +901,10 @@ You must return ONLY valid JSON matching this comprehensive structure for applia
   "mpn": "manufacturer part number",
   "country_of_origin": "manufacturing country",
   "release_year": "year released",
+  "msrp_price": "$XXX.XX or null",
+  "msrp_confidence": "verified or single-source or conflicting or null",
+  "msrp_source_count": 0,
+  "msrp_verified": true,
   
   "product_height": "product height with units",
   "product_width": "product width with units",
@@ -1039,6 +1056,10 @@ Return comprehensive, verified product data in the specified JSON format."""
             mpn=raw_data.get("mpn"),
             country_of_origin=raw_data.get("country_of_origin"),
             release_year=raw_data.get("release_year"),
+            msrp_price=raw_data.get("msrp_price"),
+            msrp_confidence=raw_data.get("msrp_confidence"),
+            msrp_source_count=raw_data.get("msrp_source_count"),
+            msrp_verified=raw_data.get("msrp_verified"),
             verified_by=provider["name"]
         ),
         dimensions_and_weight=DimensionsAndWeight(

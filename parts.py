@@ -29,6 +29,10 @@ class CoreIdentification(BaseModel):
     upc: Optional[str] = Field(None, description="UPC/GTIN")
     condition: Optional[str] = Field(None, description="New OEM / New / Refurbished / Open-Box")
     is_oem: Optional[bool] = Field(None, description="Whether this is genuine OEM")
+    price: Optional[str] = Field(None, description="Part price")
+    price_confidence: Optional[str] = Field(None, description="Price confidence: verified/single-source/conflicting/null")
+    price_source_count: Optional[int] = Field(None, description="Number of price sources found (0-3+)")
+    price_verified: Optional[bool] = Field(None, description="True if 2+ matching sources, false otherwise")
 
 
 class ProductTitle(BaseModel):
@@ -151,11 +155,21 @@ class PartRecord(BaseModel):
 
 PARTS_ENRICHMENT_PROMPT = """You are an appliance parts data enrichment specialist. Given a part number and brand, provide comprehensive technical and commercial information.
 
-⚠️ CRITICAL MSRP VALIDATION RULE:
-- MSRP/Price is ONLY valid if you find at least 2 independent sources with the SAME price
-- If only 1 source has a price, or if sources show different prices, set price to null
-- Sources include: OEM websites, authorized parts distributors, repair manuals, etc.
-- Price must match exactly between sources to be considered valid
+⚠️ ENHANCED PRICE VALIDATION WITH CONFIDENCE TRACKING:
+
+PRICING RULES:
+1. **2+ sources with SAME price** → Set price + confidence: "verified" + source_count: 2+ + verified: true
+2. **1 source only** → Set price + confidence: "single-source" + source_count: 1 + verified: false
+3. **2+ sources CONFLICTING** → Set price to lower value + confidence: "conflicting" + source_count: 2+ + verified: false
+4. **No sources found** → Set price: null + confidence: null + source_count: 0 + verified: false
+
+SOURCES: OEM websites, authorized parts distributors, repair manuals, parts retailers, etc.
+
+ADD THESE FIELDS TO core_identification:
+- "price": "$XX.XX" or null
+- "price_confidence": "verified" | "single-source" | "conflicting" | null
+- "price_source_count": number of sources found
+- "price_verified": true only if 2+ matching sources
 
 Part Number: {part_number}
 Brand: {brand}
@@ -171,7 +185,11 @@ Return ONLY a valid JSON object with these sections (use null for unknown fields
     "alternate_part_numbers": ["alternate1", "alternate2"],
     "upc": "UPC/GTIN code",
     "condition": "New OEM / New / Refurbished / Open-Box",
-    "is_oem": true
+    "is_oem": true,
+    "price": "$XX.XX or null",
+    "price_confidence": "verified or single-source or conflicting or null",
+    "price_source_count": 0,
+    "price_verified": true
   }},
   "product_title": {{
     "product_title": "SEO-friendly title"

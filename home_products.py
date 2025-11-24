@@ -26,6 +26,9 @@ class ProductIdentity(BaseModel):
     subcategory: Optional[str] = Field(None, description="e.g., Widespread/Single-hole/etc.")
     series_collection: Optional[str] = Field(None, description="e.g., Delta Trinsic, Kohler Artifacts")
     msrp_price: Optional[str] = Field(None, description="Manufacturer's suggested retail price")
+    msrp_confidence: Optional[str] = Field(None, description="Price confidence: verified/single-source/conflicting/null")
+    msrp_source_count: Optional[int] = Field(None, description="Number of price sources found (0-3+)")
+    msrp_verified: Optional[bool] = Field(None, description="True if 2+ matching sources, false otherwise")
 
 # ============================================================================
 # SECTION B — PHYSICAL ATTRIBUTES
@@ -271,12 +274,24 @@ INPUT DATA:
 - Their data should be prioritized for specifications, pricing, and product details
 - Use Ferguson data as the baseline when available, supplement with other sources
 
-⚠️ CRITICAL MSRP VALIDATION RULE:
-- MSRP is ONLY valid if you find at least 2 independent sources with the SAME price
-- If only 1 source has a price (including Ferguson), or if sources show different prices, set msrp_price to null
-- Sources include: manufacturer website, fergusonhome.com, authorized retailers, product spec sheets
-- Price must match exactly between sources to be considered valid
-- Note in detailed_description if pricing could not be verified due to single source or conflicting sources
+⚠️ ENHANCED MSRP VALIDATION WITH CONFIDENCE TRACKING:
+
+PRICING RULES (Ferguson data still prioritized as baseline):
+1. **Ferguson + 1+ other source MATCH** → Set MSRP + confidence: "verified" + source_count: 2+ + verified: true
+2. **2+ non-Ferguson sources MATCH** → Set MSRP + confidence: "verified" + source_count: 2+ + verified: true
+3. **Ferguson ONLY (no other sources)** → Set MSRP + confidence: "single-source" + source_count: 1 + verified: false
+4. **1 non-Ferguson source only** → Set MSRP + confidence: "single-source" + source_count: 1 + verified: false
+5. **Ferguson + other sources CONFLICT** → Set MSRP to Ferguson price + confidence: "conflicting" + source_count: 2+ + verified: false
+6. **2+ sources CONFLICT (no Ferguson)** → Set MSRP to lowest + confidence: "conflicting" + source_count: 2+ + verified: false
+7. **No sources found** → Set msrp_price: null + confidence: null + source_count: 0 + verified: false
+
+SOURCES: fergusonhome.com (priority), manufacturer website, authorized retailers, product spec sheets
+
+ADD TO product_identity SECTION:
+- "msrp_confidence": "verified" | "single-source" | "conflicting" | null
+- "msrp_source_count": number of sources found (0, 1, 2, 3+)
+- "msrp_verified": true only if 2+ matching sources, false otherwise
+- Note confidence level in ai_enrichment.detailed_description
 
 YOUR TASK:
 Using the model number as the primary identifier (and brand/description as helpers if provided), research and enrich this product with comprehensive details following the Master Product Data Schema v1.0 (Sections A through L).
@@ -298,7 +313,7 @@ RESPONSE FORMAT:
 Return a complete JSON object matching the HomeProductRecord schema with all 12 sections (A-L):
 
 {{
-  "product_identity": {{
+  "product_identity": {
     "brand": "...",
     "model_number": "...",
     "mpn": "...",
@@ -310,7 +325,10 @@ Return a complete JSON object matching the HomeProductRecord schema with all 12 
     "category": "...",
     "subcategory": "...",
     "series_collection": "...",
-    "msrp_price": "..."
+    "msrp_price": "...",
+    "msrp_confidence": "verified or single-source or conflicting or null",
+    "msrp_source_count": 0,
+    "msrp_verified": true
   }},
   "dimensions": {{ ... }},
   "material_construction": {{ ... }},
