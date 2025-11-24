@@ -6,6 +6,7 @@ Single-file FastAPI backend that uses OpenAI to enrich product data.
 import os
 import json
 import time
+import atexit
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from collections import defaultdict
@@ -18,6 +19,9 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
+
+# Metrics persistence file
+METRICS_FILE = "portal_metrics.json"
 
 # Import home products module
 from home_products import (
@@ -104,41 +108,66 @@ ai_metrics = {
 }
 
 # Portal-specific metrics tracking
-portal_metrics = {
-    "catalog": {  # /enrich endpoint
-        "total_requests": 0,
-        "successful_requests": 0,
-        "failed_requests": 0,
-        "total_response_time": 0.0,
-        "avg_response_time": 0.0,
-        "last_used": None,
-        "ui_calls": 0,  # Calls from portal UI
-        "api_calls": 0,  # Direct API calls
-    },
-    "parts": {  # /enrich-part endpoint
-        "total_requests": 0,
-        "successful_requests": 0,
-        "failed_requests": 0,
-        "total_response_time": 0.0,
-        "avg_response_time": 0.0,
-        "last_used": None,
-        "ui_calls": 0,
-        "api_calls": 0,
-    },
-    "home_products": {  # /enrich-home-product endpoint
-        "total_requests": 0,
-        "successful_requests": 0,
-        "failed_requests": 0,
-        "total_response_time": 0.0,
-        "avg_response_time": 0.0,
-        "last_used": None,
-        "ui_calls": 0,
-        "api_calls": 0,
-    }
-}
+def load_metrics():
+    """Load metrics from file if it exists."""
+    try:
+        if os.path.exists(METRICS_FILE):
+            with open(METRICS_FILE, 'r') as f:
+                data = json.load(f)
+                return data.get('portal_metrics', {}), data.get('request_logs', [])
+    except Exception as e:
+        print(f"Error loading metrics: {e}")
+    
+    # Return default metrics if file doesn't exist or error
+    return {
+        "catalog": {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "total_response_time": 0.0,
+            "avg_response_time": 0.0,
+            "last_used": None,
+            "ui_calls": 0,
+            "api_calls": 0,
+        },
+        "parts": {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "total_response_time": 0.0,
+            "avg_response_time": 0.0,
+            "last_used": None,
+            "ui_calls": 0,
+            "api_calls": 0,
+        },
+        "home_products": {
+            "total_requests": 0,
+            "successful_requests": 0,
+            "failed_requests": 0,
+            "total_response_time": 0.0,
+            "avg_response_time": 0.0,
+            "last_used": None,
+            "ui_calls": 0,
+            "api_calls": 0,
+        }
+    }, []
 
-# Request logs for detailed tracking (keep last 100 requests)
-request_logs = []
+def save_metrics():
+    """Save metrics to file."""
+    try:
+        with open(METRICS_FILE, 'w') as f:
+            json.dump({
+                'portal_metrics': portal_metrics,
+                'request_logs': request_logs
+            }, f)
+    except Exception as e:
+        print(f"Error saving metrics: {e}")
+
+# Load metrics on startup
+portal_metrics, request_logs = load_metrics()
+
+# Save metrics on shutdown
+atexit.register(save_metrics)
 
 def update_portal_metrics(portal_name: str, success: bool, response_time: float, 
                           source: str = "api", user_agent: str = None, model_number: str = None, brand: str = None):
@@ -178,6 +207,9 @@ def update_portal_metrics(portal_name: str, success: bool, response_time: float,
     # Keep only last 100 logs
     if len(request_logs) > 100:
         request_logs.pop(0)
+    
+    # Save metrics after each update
+    save_metrics()
 
 def calculate_field_completeness(product_record: 'ProductRecord') -> float:
     """Calculate what percentage of optional fields are populated."""
