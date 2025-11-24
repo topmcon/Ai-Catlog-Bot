@@ -48,7 +48,12 @@ export default function Dashboard() {
 
   const checkBackendStatus = async () => {
     try {
-      const response = await fetch(`${API_URL}/health`)
+      const response = await fetch(`${API_URL}/health`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
       if (response.ok) {
         setStats(prev => ({ ...prev, backendStatus: 'online' }))
       } else {
@@ -64,8 +69,11 @@ export default function Dashboard() {
     try {
       const response = await fetch(`${API_URL}/portal-metrics`, {
         headers: {
-          'X-API-KEY': API_KEY
-        }
+          'X-API-KEY': API_KEY,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
       })
       
       if (response.ok) {

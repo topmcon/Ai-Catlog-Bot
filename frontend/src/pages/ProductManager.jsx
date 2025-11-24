@@ -22,8 +22,11 @@ export default function ProductManager() {
       setLoading(true)
       const response = await fetch(`${API_URL}/portal-metrics`, {
         headers: {
-          'X-API-KEY': API_KEY
-        }
+          'X-API-KEY': API_KEY,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        cache: 'no-store'
       })
 
       if (response.ok) {
