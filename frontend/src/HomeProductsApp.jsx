@@ -3,6 +3,7 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import { API_URL, API_KEY } from './config/api'
 
+// Home Products Portal - Master Schema v1.0 with vertical card layout
 function HomeProductsApp() {
   const [productData, setProductData] = useState(null)
   const [loading, setLoading] = useState(false)
