@@ -17,7 +17,7 @@ Before deploying the code, you must whitelist the API endpoint:
 2. Click **New Remote Site**
 3. Enter the following:
    - **Remote Site Name**: `CatalogBotAPI`
-   - **Remote Site URL**: `https://your-catalog-bot.onrender.com`
+   - **Remote Site URL**: `https://api.cxc-ai.com`
    - **Active**: ✓ Checked
 4. Click **Save**
 
@@ -40,7 +40,7 @@ Before deploying the code, you must whitelist the API endpoint:
 Edit `CatalogBotService.cls` and update:
 
 ```apex
-private static final String API_URL = 'https://your-actual-domain.onrender.com/enrich';
+private static final String API_URL = 'https://api.cxc-ai.com/enrich';
 private static final String API_KEY = 'your-actual-api-key';
 ```
 

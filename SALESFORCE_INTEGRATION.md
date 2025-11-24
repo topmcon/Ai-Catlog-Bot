@@ -25,8 +25,8 @@ This integration allows Salesforce to:
 - Automate enrichment via triggers/flows
 
 **API Endpoints:**
-- Product: `https://ai-catlog-bot.onrender.com/enrich`
-- Parts: `https://ai-catlog-bot.onrender.com/enrich-part`
+- Product: `https://api.cxc-ai.com/enrich`
+- Parts: `https://api.cxc-ai.com/enrich-part`
 
 **Authentication:** API Key in header
 
@@ -39,7 +39,7 @@ This integration allows Salesforce to:
 **Setup → Security → Remote Site Settings → New Remote Site**
 
 **Name:** CatalogBOT_API  
-**Remote Site URL:** `https://ai-catlog-bot.onrender.com`  
+**Remote Site URL:** `https://api.cxc-ai.com`  
 **Description:** Catalog-BOT and Parts-BOT API  
 **Active:** ✓ Checked
 
@@ -98,7 +98,7 @@ Fields:
 public class CatalogBotProductService {
     
     // API Configuration
-    private static final String API_URL = 'https://ai-catlog-bot.onrender.com/enrich';
+    private static final String API_URL = 'https://api.cxc-ai.com/enrich';
     private static final String API_KEY = 'catbot123'; // Store in Custom Metadata or Named Credentials
     
     /**
@@ -251,7 +251,7 @@ public class CatalogBotProductService {
 public class CatalogBotPartsService {
     
     // API Configuration
-    private static final String API_URL = 'https://ai-catlog-bot.onrender.com/enrich-part';
+    private static final String API_URL = 'https://api.cxc-ai.com/enrich-part';
     private static final String API_KEY = 'catbot123'; // Store in Custom Metadata or Named Credentials
     
     /**
@@ -712,7 +712,7 @@ export default class ProductEnricher extends LightningElement {
 
 ```
 Label: CatalogBOT_API
-URL: https://ai-catlog-bot.onrender.com
+URL: https://api.cxc-ai.com
 Identity Type: Named Principal
 Authentication Protocol: Custom
 

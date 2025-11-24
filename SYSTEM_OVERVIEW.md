@@ -7,7 +7,7 @@ Complete AI-powered product and parts enrichment system with three portals and c
 ## 🌐 Live Portals
 
 ### 1. 📦 Product Catalog Portal
-**URL:** https://ai-catlog-bot.vercel.app
+**URL:** https://cxc-ai.com
 
 **Purpose:** Full appliance product enrichment
 
@@ -24,7 +24,7 @@ Complete AI-powered product and parts enrichment system with three portals and c
 ---
 
 ### 2. 🔧 Parts Lookup Portal
-**URL:** https://ai-catlog-bot.vercel.app/parts.html
+**URL:** https://cxc-ai.com/parts.html
 
 **Purpose:** Appliance parts technical specifications and compatibility
 
@@ -41,7 +41,7 @@ Complete AI-powered product and parts enrichment system with three portals and c
 ---
 
 ### 3. 🎛️ Admin Dashboard
-**URL:** https://ai-catlog-bot.vercel.app/admin.html
+**URL:** https://cxc-ai.com/admin.html
 
 **Purpose:** System monitoring and management
 
@@ -201,13 +201,13 @@ GET /ai-providers         # Provider status
 ### For End Users
 
 **Product Lookup:**
-1. Go to https://ai-catlog-bot.vercel.app
+1. Go to https://cxc-ai.com
 2. Enter brand and model number
 3. Click "Enrich Product"
 4. View comprehensive results
 
 **Parts Lookup:**
-1. Go to https://ai-catlog-bot.vercel.app/parts.html
+1. Go to https://cxc-ai.com/parts.html
 2. Enter part number and brand
 3. Click "Lookup Part"
 4. View technical specs and compatibility
@@ -215,7 +215,7 @@ GET /ai-providers         # Provider status
 ### For Administrators
 
 **Admin Dashboard:**
-1. Go to https://ai-catlog-bot.vercel.app/admin.html
+1. Go to https://cxc-ai.com/admin.html
 2. Navigate using sidebar menu
 3. View real-time metrics
 4. Test API endpoints
@@ -342,8 +342,8 @@ Track performance through admin dashboard:
 ## 📞 API Documentation
 
 Interactive API docs available at:
-- **Swagger UI:** https://ai-catlog-bot.onrender.com/docs
-- **ReDoc:** https://ai-catlog-bot.onrender.com/redoc
+- **Swagger UI:** https://api.cxc-ai.com/docs
+- **ReDoc:** https://api.cxc-ai.com/redoc
 
 ---
 

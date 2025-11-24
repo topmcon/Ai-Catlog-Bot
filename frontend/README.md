@@ -48,7 +48,7 @@ npm run preview  # Preview production build
 3. Click "Import Project"
 4. Select your repository
 5. Set environment variables:
-   - `VITE_API_URL`: Your backend URL (e.g., https://catalog-bot.onrender.com)
+   - `VITE_API_URL`: Your backend URL (e.g., https://api.cxc-ai.com)
    - `VITE_API_KEY`: Your API key
 6. Deploy!
 
@@ -113,7 +113,7 @@ VITE_API_KEY=test123
 
 For production (Vercel):
 ```env
-VITE_API_URL=https://your-backend.onrender.com
+VITE_API_URL=https://api.cxc-ai.com
 VITE_API_KEY=your-production-key
 ```
 

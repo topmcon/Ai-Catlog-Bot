@@ -33,7 +33,7 @@ X-API-KEY: your-api-key-here
 
 ### Endpoint
 ```
-POST https://ai-catlog-bot.onrender.com/enrich
+POST https://api.cxc-ai.com/enrich
 ```
 
 ### Request Format
@@ -168,7 +168,7 @@ X-API-KEY: catbot123
 
 ### Endpoint
 ```
-POST https://ai-catlog-bot.onrender.com/enrich-part
+POST https://api.cxc-ai.com/enrich-part
 ```
 
 ### Request Format
@@ -400,7 +400,7 @@ X-API-KEY: catbot123
 **Product Enrichment:**
 ```javascript
 async function enrichProduct(brand, modelNumber) {
-  const response = await fetch('https://ai-catlog-bot.onrender.com/enrich', {
+  const response = await fetch('https://api.cxc-ai.com/enrich', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -436,7 +436,7 @@ enrichProduct('Samsung', 'RF28R7351SR')
 **Parts Enrichment:**
 ```javascript
 async function enrichPart(partNumber, brand) {
-  const response = await fetch('https://ai-catlog-bot.onrender.com/enrich-part', {
+  const response = await fetch('https://api.cxc-ai.com/enrich-part', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -478,7 +478,7 @@ import requests
 import json
 
 def enrich_product(brand, model_number):
-    url = "https://ai-catlog-bot.onrender.com/enrich"
+    url = "https://api.cxc-ai.com/enrich"
     headers = {
         "Content-Type": "application/json",
         "X-API-KEY": "catbot123"
@@ -511,7 +511,7 @@ except Exception as e:
 import requests
 
 def enrich_part(part_number, brand):
-    url = "https://ai-catlog-bot.onrender.com/enrich-part"
+    url = "https://api.cxc-ai.com/enrich-part"
     headers = {
         "Content-Type": "application/json",
         "X-API-KEY": "catbot123"
@@ -550,7 +550,7 @@ except Exception as e:
 
 **Product Enrichment:**
 ```bash
-curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
+curl -X POST "https://api.cxc-ai.com/enrich" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: catbot123" \
   -d '{
@@ -561,7 +561,7 @@ curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
 
 **Parts Enrichment:**
 ```bash
-curl -X POST "https://ai-catlog-bot.onrender.com/enrich-part" \
+curl -X POST "https://api.cxc-ai.com/enrich-part" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: catbot123" \
   -d '{
@@ -576,7 +576,7 @@ curl -X POST "https://ai-catlog-bot.onrender.com/enrich-part" \
 ```php
 <?php
 function enrichProduct($brand, $modelNumber) {
-    $url = "https://ai-catlog-bot.onrender.com/enrich";
+    $url = "https://api.cxc-ai.com/enrich";
     $headers = [
         "Content-Type: application/json",
         "X-API-KEY: catbot123"
@@ -676,7 +676,7 @@ try {
 
 ### Health Check
 ```bash
-GET https://ai-catlog-bot.onrender.com/health
+GET https://api.cxc-ai.com/health
 ```
 
 Returns:
@@ -689,7 +689,7 @@ Returns:
 
 ### API Documentation
 ```
-GET https://ai-catlog-bot.onrender.com/docs
+GET https://api.cxc-ai.com/docs
 ```
 Interactive Swagger UI documentation.
 
@@ -720,7 +720,7 @@ Interactive Swagger UI documentation.
 ## 📞 Support
 
 **Issues or Questions:**
-- Check API documentation: https://ai-catlog-bot.onrender.com/docs
+- Check API documentation: https://api.cxc-ai.com/docs
 - Review error messages in response
 - Test with example products/parts first
 - Check backend logs in Render dashboard
@@ -741,4 +741,4 @@ Parts:
 
 **API Version:** 1.0.0
 **Last Updated:** November 23, 2025
-**Base URL:** https://ai-catlog-bot.onrender.com
+**Base URL:** https://api.cxc-ai.com

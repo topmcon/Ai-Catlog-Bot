@@ -378,7 +378,7 @@ Add verification badges to product displays:
 ### Test 1: Known Product with Good Data
 ```bash
 # Should return VERIFIED data
-curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
+curl -X POST "https://api.cxc-ai.com/enrich" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: catbot123" \
   -d '{
@@ -390,7 +390,7 @@ curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
 ### Test 2: Obscure Product
 ```bash
 # Should return lower verification rate
-curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
+curl -X POST "https://api.cxc-ai.com/enrich" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: catbot123" \
   -d '{

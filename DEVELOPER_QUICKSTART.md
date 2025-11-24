@@ -28,7 +28,7 @@ X-API-KEY: catbot123
 
 ### Send This:
 ```json
-POST https://ai-catlog-bot.onrender.com/enrich
+POST https://api.cxc-ai.com/enrich
 
 Headers:
 Content-Type: application/json
@@ -55,7 +55,7 @@ Complete product information including:
 
 ### Send This:
 ```json
-POST https://ai-catlog-bot.onrender.com/enrich-part
+POST https://api.cxc-ai.com/enrich-part
 
 Headers:
 Content-Type: application/json
@@ -86,7 +86,7 @@ Complete parts information including:
 **Product:**
 ```javascript
 async function getProduct(brand, modelNumber) {
-  const response = await fetch('https://ai-catlog-bot.onrender.com/enrich', {
+  const response = await fetch('https://api.cxc-ai.com/enrich', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -116,7 +116,7 @@ getProduct('Samsung', 'RF28R7351SR')
 **Parts:**
 ```javascript
 async function getPart(partNumber, brand) {
-  const response = await fetch('https://ai-catlog-bot.onrender.com/enrich-part', {
+  const response = await fetch('https://api.cxc-ai.com/enrich-part', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -150,7 +150,7 @@ getPart('WR17X11653', 'GE')
 import requests
 
 def get_product(brand, model_number):
-    url = "https://ai-catlog-bot.onrender.com/enrich"
+    url = "https://api.cxc-ai.com/enrich"
     headers = {
         "Content-Type": "application/json",
         "X-API-KEY": "catbot123"
@@ -178,7 +178,7 @@ print(product)
 import requests
 
 def get_part(part_number, brand):
-    url = "https://ai-catlog-bot.onrender.com/enrich-part"
+    url = "https://api.cxc-ai.com/enrich-part"
     headers = {
         "Content-Type": "application/json",
         "X-API-KEY": "catbot123"
@@ -205,7 +205,7 @@ print(part)
 
 **Product:**
 ```bash
-curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
+curl -X POST "https://api.cxc-ai.com/enrich" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: catbot123" \
   -d '{"brand":"Samsung","model_number":"RF28R7351SR"}'
@@ -213,7 +213,7 @@ curl -X POST "https://ai-catlog-bot.onrender.com/enrich" \
 
 **Parts:**
 ```bash
-curl -X POST "https://ai-catlog-bot.onrender.com/enrich-part" \
+curl -X POST "https://api.cxc-ai.com/enrich-part" \
   -H "Content-Type: application/json" \
   -H "X-API-KEY: catbot123" \
   -d '{"part_number":"WR17X11653","brand":"GE"}'
@@ -416,14 +416,14 @@ try {
 
 **Product API:**
 ```
-Endpoint: POST https://ai-catlog-bot.onrender.com/enrich
+Endpoint: POST https://api.cxc-ai.com/enrich
 Header: X-API-KEY: catbot123
 Body: {"brand":"Samsung","model_number":"RF28R7351SR"}
 ```
 
 **Parts API:**
 ```
-Endpoint: POST https://ai-catlog-bot.onrender.com/enrich-part
+Endpoint: POST https://api.cxc-ai.com/enrich-part
 Header: X-API-KEY: catbot123
 Body: {"part_number":"WR17X11653","brand":"GE"}
 ```
@@ -435,7 +435,7 @@ Body: {"part_number":"WR17X11653","brand":"GE"}
 **Test your connection:**
 ```bash
 # Quick test (should return "healthy")
-curl https://ai-catlog-bot.onrender.com/health
+curl https://api.cxc-ai.com/health
 ```
 
 **Common issues:**
@@ -454,7 +454,7 @@ curl https://ai-catlog-bot.onrender.com/health
 async function enrichProduct(brand, model) {
   try {
     // Make request
-    const response = await fetch('https://ai-catlog-bot.onrender.com/enrich', {
+    const response = await fetch('https://api.cxc-ai.com/enrich', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

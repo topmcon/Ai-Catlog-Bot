@@ -79,7 +79,7 @@ You'll get a complete product record in JSON format with:
    - `API_KEY`
 6. Deploy!
 
-**Live URL**: `https://your-app.onrender.com`
+**Live URL**: `https://api.cxc-ai.com`
 
 ### Option B: Railway
 ```bash
@@ -104,7 +104,7 @@ docker run -p 8000:8000 \
 ## 🔗 Integrate with Salesforce
 
 1. Copy `/salesforce/CatalogBotService.cls` to Salesforce
-2. Add Remote Site: `https://your-api-url.onrender.com`
+2. Add Remote Site: `https://api.cxc-ai.com`
 3. Create a Flow:
    - Trigger: Product2 created/updated
    - Action: Call `enrichProduct` Apex method

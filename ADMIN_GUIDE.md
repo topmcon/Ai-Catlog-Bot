@@ -161,7 +161,7 @@ POST /enrich    - Product enrichment (requires API key)
   
 - **CORS Configuration**
   - Add/remove allowed origins
-  - Wildcard support (*.vercel.app)
+  - Wildcard support (*.cxc-ai.com)
   - Default localhost entries
   
 - **OpenAI Settings**
@@ -192,7 +192,7 @@ POST /enrich    - Product enrichment (requires API key)
 - Max Tokens: `4000`
 - Temperature: `0.7`
 - Rate Limit: `100 requests/hour`
-- CORS: `localhost:3000, localhost:5173, *.vercel.app`
+- CORS: `localhost:3000, localhost:5173, *.cxc-ai.com`
 
 ---
 

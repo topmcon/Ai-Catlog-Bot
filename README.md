@@ -90,7 +90,7 @@ Server will be available at `http://localhost:8000`
 
 ### Base URL
 - **Local**: `http://localhost:8000`
-- **Production**: `https://your-app.onrender.com`
+- **Production**: `https://api.cxc-ai.com`
 
 ### Endpoints
 
@@ -227,39 +227,21 @@ Try these models to test the API:
 
 ## 🌐 Deployment
 
-### Deploy to Render (Recommended)
+### Self-Hosted VPS (Production)
 
-1. **Create account** at [render.com](https://render.com)
+**Current Setup:**
+- Frontend: https://cxc-ai.com
+- API: https://api.cxc-ai.com
+- Server: 198.211.105.43 (DigitalOcean VPS)
+- Auto-deployment: GitHub Actions
 
-2. **Create new Web Service**:
-   - Connect your GitHub repository
-   - Choose "Python" environment
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+**Deployment Process:**
+1. Push code to `production` branch
+2. GitHub Actions automatically deploys to VPS
+3. Frontend builds and deploys to `/var/www/html`
+4. Backend restarts via Docker
 
-3. **Add Environment Variables**:
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `API_KEY`: Your custom API authentication key
-
-4. **Deploy**: Render will auto-deploy on every git push
-
-Your API will be live at: `https://catalog-bot-xxx.onrender.com`
-
-### Deploy to Railway
-
-1. Install Railway CLI: `npm i -g @railway/cli`
-2. Login: `railway login`
-3. Initialize: `railway init`
-4. Add variables: `railway variables set OPENAI_API_KEY=xxx API_KEY=xxx`
-5. Deploy: `railway up`
-
-### Deploy to Heroku
-
-```bash
-heroku create catalog-bot
-heroku config:set OPENAI_API_KEY=xxx API_KEY=xxx
-git push heroku main
-```
+See [DEPLOYMENT_GITHUB_ACTIONS.md](DEPLOYMENT_GITHUB_ACTIONS.md) for details.
 
 ---
 
@@ -272,7 +254,7 @@ Create a new Apex class in Salesforce:
 ```apex
 public class CatalogBotService {
     
-    private static final String API_URL = 'https://catalog-bot.onrender.com/enrich';
+    private static final String API_URL = 'https://api.cxc-ai.com/enrich';
     private static final String API_KEY = 'your-api-key-here';
     
     @future(callout=true)
@@ -334,7 +316,7 @@ public class CatalogBotService {
 
 Configure Salesforce Outbound Message or Platform Event to call:
 ```
-POST https://catalog-bot.onrender.com/enrich
+POST https://api.cxc-ai.com/enrich
 X-API-KEY: your-key
 ```
 
@@ -518,8 +500,9 @@ MIT License - see LICENSE file for details
 ## 💬 Support
 
 - **Issues**: [GitHub Issues](https://github.com/topmcon/Ai-Catlog-Bot/issues)
-- **Email**: support@yourdomain.com
-- **Documentation**: This README + inline code comments
+- **Website**: https://cxc-ai.com
+- **API Docs**: https://api.cxc-ai.com/docs
+- **Documentation**: See README and docs/ folder
 
 ---
 
