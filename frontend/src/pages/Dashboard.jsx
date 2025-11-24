@@ -62,31 +62,31 @@ export default function Dashboard() {
 
   const quickActions = [
     {
+      title: 'Test Portals',
+      icon: '🌐',
+      description: 'Monitor & test all portals',
+      action: () => window.location.href = '#/portals',
+      color: 'blue'
+    },
+    {
       title: 'Test API',
       icon: '🧪',
       description: 'Run API health check',
-      action: () => window.location.href = '/api-testing',
-      color: 'blue'
+      action: () => window.location.href = '#/api-testing',
+      color: 'green'
     },
     {
       title: 'View Logs',
       icon: '📋',
       description: 'Check system logs',
-      action: () => window.location.href = '/logs',
-      color: 'green'
-    },
-    {
-      title: 'Manage Products',
-      icon: '📦',
-      description: 'Browse enriched products',
-      action: () => window.location.href = '/products',
+      action: () => window.location.href = '#/logs',
       color: 'purple'
     },
     {
       title: 'Configuration',
       icon: '⚙️',
       description: 'Update settings',
-      action: () => window.location.href = '/config',
+      action: () => window.location.href = '#/config',
       color: 'orange'
     }
   ]

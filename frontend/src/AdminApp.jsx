@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { HashRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
+import PortalsDashboard from './pages/PortalsDashboard'
 import SystemStatus from './pages/SystemStatus'
 import ServerControl from './pages/ServerControl'
 import APITesting from './pages/APITesting'
@@ -27,6 +28,7 @@ function AdminApp() {
           <main className="flex-1 p-6 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
+            <Route path="/portals" element={<PortalsDashboard />} />
             <Route path="/status" element={<SystemStatus />} />
             <Route path="/server" element={<ServerControl />} />
             <Route path="/api-testing" element={<APITesting />} />
@@ -47,6 +49,7 @@ function Sidebar({ isOpen }) {
 
   const menuItems = [
     { icon: '📊', label: 'Dashboard', path: '/' },
+    { icon: '🌐', label: 'Portals', path: '/portals' },
     { icon: '🔍', label: 'System Status', path: '/status' },
     { icon: '🖥️', label: 'Server Control', path: '/server' },
     { icon: '🔧', label: 'API Testing', path: '/api-testing' },
