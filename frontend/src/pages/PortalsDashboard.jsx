@@ -15,7 +15,7 @@ export default function PortalsDashboard() {
     product: {
       name: 'Product Enrichment',
       icon: '📦',
-      url: 'https://ai-catlog-bot.vercel.app/',
+      url: 'https://cxc-ai.com/index-catalog.html',
       endpoint: '/enrich',
       description: 'Main product catalog enrichment portal',
       testData: {
@@ -26,7 +26,7 @@ export default function PortalsDashboard() {
     parts: {
       name: 'Parts Lookup',
       icon: '🔧',
-      url: 'https://ai-catlog-bot.vercel.app/parts.html',
+      url: 'https://cxc-ai.com/parts.html',
       endpoint: '/enrich-part',
       description: 'Parts enrichment and lookup system',
       testData: {
@@ -38,7 +38,7 @@ export default function PortalsDashboard() {
     homeProducts: {
       name: 'Home Products',
       icon: '🏠',
-      url: 'https://ai-catlog-bot.vercel.app/home-products.html',
+      url: 'https://cxc-ai.com/home-products.html',
       endpoint: '/enrich-home-product',
       description: 'Home improvement products enrichment',
       testData: {
