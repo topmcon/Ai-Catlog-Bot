@@ -218,281 +218,327 @@ function PartsApp() {
 
 // Component to display part data
 function PartDisplay({ data }) {
-  const [activeTab, setActiveTab] = useState('core')
-
-  const sections = [
-    { id: 'core', label: '📦 Core Info', key: 'core_identification' },
-    { id: 'specs', label: '⚙️ Technical Specs', key: 'technical_specs' },
-    { id: 'compat', label: '🔄 Compatibility', key: 'compatibility' },
-    { id: 'symptoms', label: '🔧 Symptoms Fixed', key: 'symptoms' },
-    { id: 'install', label: '🛠️ Installation', key: 'installation' },
-    { id: 'ship', label: '📦 Shipping', key: 'shipping_info' }
-  ]
-
   return (
-    <div className="card">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+    <div className="space-y-6">
+      {/* Header Card */}
+      <div className="card bg-gradient-to-r from-primary-500 to-primary-700 text-white">
+        <h2 className="text-2xl font-bold mb-2">
           {data.product_title?.product_title || 'Part Details'}
         </h2>
-        <p className="text-sm text-gray-500">
+        <p className="text-primary-100 text-sm">
           {data.core_identification?.part_number} - {data.core_identification?.brand}
         </p>
       </div>
 
-      {/* Tabs */}
-      <div className="flex flex-wrap gap-2 mb-6 border-b border-gray-200 pb-2">
-        {sections.map((section) => (
-          <button
-            key={section.id}
-            onClick={() => setActiveTab(section.id)}
-            className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${
-              activeTab === section.id
-                ? 'bg-primary-100 text-primary-700 border-b-2 border-primary-600'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-            }`}
-          >
-            {section.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="max-h-[600px] overflow-y-auto">
-        {activeTab === 'core' && <CoreInfo data={data.core_identification} details={data.key_details} />}
-        {activeTab === 'specs' && <TechnicalInfo data={data.technical_specs} />}
-        {activeTab === 'compat' && <CompatibilityInfo data={data.compatibility} cross={data.cross_reference} />}
-        {activeTab === 'symptoms' && <SymptomsInfo data={data.symptoms} description={data.description} />}
-        {activeTab === 'install' && <InstallationInfo data={data.installation} />}
-        {activeTab === 'ship' && <ShippingInfo data={data.shipping_info} availability={data.availability} />}
-      </div>
+      {/* All sections displayed vertically */}
+      <CoreInfo data={data.core_identification} details={data.key_details} />
+      <TechnicalInfo data={data.technical_specs} />
+      <CompatibilityInfo data={data.compatibility} cross={data.cross_reference} />
+      <SymptomsInfo data={data.symptoms} description={data.description} />
+      <InstallationInfo data={data.installation} />
+      <ShippingInfo data={data.shipping_info} availability={data.availability} />
     </div>
   )
 }
 
 function CoreInfo({ data, details }) {
   return (
-    <div className="space-y-4">
-      <InfoSection title="Identification">
-        <InfoRow label="Part Name" value={data?.part_name} />
-        <InfoRow label="Part Number" value={data?.part_number} />
-        <InfoRow label="Brand" value={data?.brand} />
-        <InfoRow label="Manufacturer" value={data?.manufacturer} />
-        <InfoRow label="UPC" value={data?.upc} />
-        <InfoRow label="Condition" value={data?.condition} />
-        <InfoRow label="Genuine OEM" value={data?.is_oem ? 'Yes' : 'No'} />
-        {data?.alternate_part_numbers && data.alternate_part_numbers.length > 0 && (
-          <InfoRow label="Alternate Numbers" value={data.alternate_part_numbers.join(', ')} />
-        )}
-      </InfoSection>
-
-      <InfoSection title="Key Details">
-        <InfoRow label="Category" value={details?.category} />
-        <InfoRow label="Appliance Type" value={details?.appliance_type} />
-        <InfoRow label="Weight" value={details?.weight} />
-        <InfoRow label="Dimensions" value={details?.product_dimensions} />
-        <InfoRow label="Color" value={details?.color} />
-        <InfoRow label="Material" value={details?.material} />
-        <InfoRow label="Warranty" value={details?.warranty} />
-      </InfoSection>
-    </div>
-  )
-}
-
-function TechnicalInfo({ data }) {
-  return (
-    <div className="space-y-4">
-      {data?.electrical && (
-        <InfoSection title="Electrical Specifications">
-          <InfoRow label="Voltage" value={data.electrical.voltage} />
-          <InfoRow label="Amperage" value={data.electrical.amperage} />
-          <InfoRow label="Wattage" value={data.electrical.wattage} />
-          <InfoRow label="Resistance" value={data.electrical.resistance} />
-          <InfoRow label="Connector Type" value={data.electrical.connector_type} />
-          <InfoRow label="Bulb Type" value={data.electrical.bulb_type} />
-          <InfoRow label="Lumens" value={data.electrical.lumens} />
-          <InfoRow label="Color Temperature" value={data.electrical.color_temperature} />
-        </InfoSection>
-      )}
-
-      {data?.mechanical && (
-        <InfoSection title="Mechanical Specifications">
-          <InfoRow label="Size" value={data.mechanical.size} />
-          <InfoRow label="Thread Size" value={data.mechanical.thread_size} />
-          <InfoRow label="Flow Rate" value={data.mechanical.flow_rate} />
-          <InfoRow label="PSI Rating" value={data.mechanical.psi_rating} />
-          <InfoRow label="Temperature Range" value={data.mechanical.temperature_range} />
-          <InfoRow label="Capacity" value={data.mechanical.capacity} />
-        </InfoSection>
-      )}
-
-      {data?.safety_compliance && (
-        <InfoSection title="Safety & Compliance">
-          <InfoRow label="Prop 65 Warning" value={data.safety_compliance.prop65_warning} />
-          {data.safety_compliance.certifications && data.safety_compliance.certifications.length > 0 && (
-            <InfoRow label="Certifications" value={data.safety_compliance.certifications.join(', ')} />
-          )}
-        </InfoSection>
-      )}
-    </div>
-  )
-}
-
-function CompatibilityInfo({ data, cross }) {
-  return (
-    <div className="space-y-4">
-      <InfoSection title="Compatible With">
-        {data?.compatible_brands && data.compatible_brands.length > 0 && (
-          <InfoRow label="Brands" value={data.compatible_brands.join(', ')} />
-        )}
-        {data?.compatible_appliance_types && data.compatible_appliance_types.length > 0 && (
-          <InfoRow label="Appliance Types" value={data.compatible_appliance_types.join(', ')} />
-        )}
-        {data?.compatible_models && data.compatible_models.length > 0 && (
-          <div className="border-t border-gray-200 pt-3 mt-3">
-            <p className="text-sm font-medium text-gray-700 mb-2">Compatible Models:</p>
-            <div className="text-sm text-gray-900 max-h-40 overflow-y-auto bg-gray-50 p-3 rounded">
-              {data.compatible_models.map((model, idx) => (
-                <div key={idx} className="py-1">{model}</div>
-              ))}
+    <div className="card">
+      <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <span className="mr-2">📦</span> Core Identification
+      </h3>
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-600 mb-2">Identification</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <InfoRow label="Part Name" value={data?.part_name} />
+            <InfoRow label="Part Number" value={data?.part_number} />
+            <InfoRow label="Brand" value={data?.brand} />
+            <InfoRow label="Manufacturer" value={data?.manufacturer} />
+            <InfoRow label="UPC" value={data?.upc} />
+            <InfoRow label="Condition" value={data?.condition} />
+            <InfoRow label="Genuine OEM" value={data?.is_oem ? 'Yes' : 'No'} />
+          </div>
+          {data?.alternate_part_numbers && data.alternate_part_numbers.length > 0 && (
+            <div className="mt-3">
+              <InfoRow label="Alternate Numbers" value={data.alternate_part_numbers.join(', ')} />
             </div>
+          )}
+        </div>
+
+        <div>
+          <h4 className="text-sm font-semibold text-gray-600 mb-2 mt-4">Key Details</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <InfoRow label="Category" value={details?.category} />
+            <InfoRow label="Appliance Type" value={details?.appliance_type} />
+            <InfoRow label="Weight" value={details?.weight} />
+            <InfoRow label="Dimensions" value={details?.product_dimensions} />
+            <InfoRow label="Color" value={details?.color} />
+            <InfoRow label="Material" value={details?.material} />
+            <InfoRow label="Warranty" value={details?.warranty} />
           </div>
-        )}
-      </InfoSection>
-
-      <InfoSection title="Cross Reference">
-        {cross?.replaces_part_numbers && cross.replaces_part_numbers.length > 0 && (
-          <InfoRow label="Replaces" value={cross.replaces_part_numbers.join(', ')} />
-        )}
-        {cross?.superseded_part_numbers && cross.superseded_part_numbers.length > 0 && (
-          <InfoRow label="Superseded" value={cross.superseded_part_numbers.join(', ')} />
-        )}
-        {cross?.equivalent_parts && cross.equivalent_parts.length > 0 && (
-          <InfoRow label="Equivalents" value={cross.equivalent_parts.join(', ')} />
-        )}
-      </InfoSection>
-    </div>
-  )
-}
-
-function SymptomsInfo({ data, description }) {
-  return (
-    <div className="space-y-4">
-      {data?.symptoms && data.symptoms.length > 0 && (
-        <InfoSection title="Symptoms This Part Fixes">
-          <ul className="space-y-2">
-            {data.symptoms.map((symptom, idx) => (
-              <li key={idx} className="flex items-start">
-                <span className="text-green-500 mr-2">✓</span>
-                <span className="text-sm text-gray-900">{symptom}</span>
-              </li>
-            ))}
-          </ul>
-        </InfoSection>
-      )}
-
-      <InfoSection title="Description">
-        {description?.short_description && (
-          <p className="text-sm text-gray-900 mb-3">{description.short_description}</p>
-        )}
-        {description?.long_description && (
-          <p className="text-sm text-gray-700">{description.long_description}</p>
-        )}
-      </InfoSection>
-    </div>
-  )
-}
-
-function InstallationInfo({ data }) {
-  return (
-    <div className="space-y-4">
-      <InfoSection title="Installation Details">
-        <InfoRow label="Difficulty" value={data?.installation_difficulty} />
-        {data?.tools_required && data.tools_required.length > 0 && (
-          <InfoRow label="Tools Required" value={data.tools_required.join(', ')} />
-        )}
-        {data?.safety_notes && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
-            <p className="text-sm font-medium text-yellow-800 mb-1">⚠️ Safety Notes:</p>
-            <p className="text-sm text-yellow-700">{data.safety_notes}</p>
-          </div>
-        )}
-      </InfoSection>
-
-      {data?.installation_steps && data.installation_steps.length > 0 && (
-        <InfoSection title="Installation Steps">
-          <ol className="space-y-2">
-            {data.installation_steps.map((step, idx) => (
-              <li key={idx} className="flex items-start">
-                <span className="font-bold text-primary-600 mr-3">{idx + 1}.</span>
-                <span className="text-sm text-gray-900">{step}</span>
-              </li>
-            ))}
-          </ol>
-        </InfoSection>
-      )}
-
-      <InfoSection title="Resources">
-        {data?.documentation_url && (
-          <a href={data.documentation_url} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline text-sm block mb-2">
-            📄 Installation Manual
-          </a>
-        )}
-        {data?.video_url && (
-          <a href={data.video_url} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline text-sm block">
-            🎥 Installation Video
-          </a>
-        )}
-      </InfoSection>
-    </div>
-  )
-}
-
-function ShippingInfo({ data, availability }) {
-  return (
-    <div className="space-y-4">
-      {availability && (
-        <InfoSection title="Availability">
-          <InfoRow label="Stock Status" value={availability.stock_status} />
-          <InfoRow label="Restock ETA" value={availability.restock_eta} />
-          <InfoRow label="Delivery ETA" value={availability.delivery_eta} />
-        </InfoSection>
-      )}
-
-      <InfoSection title="Shipping Information">
-        <InfoRow label="Shipping Weight" value={data?.shipping_weight} />
-        <InfoRow label="Shipping Dimensions" value={data?.shipping_dimensions} />
-        <InfoRow label="Estimated Ship Date" value={data?.estimated_ship_date} />
-        {data?.handling_notes && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
-            <p className="text-sm font-medium text-blue-800 mb-1">📦 Handling Notes:</p>
-            <p className="text-sm text-blue-700">{data.handling_notes}</p>
-          </div>
-        )}
-      </InfoSection>
-    </div>
-  )
-}
-
-// Helper components
-function InfoSection({ title, children }) {
-  return (
-    <div className="bg-gray-50 rounded-lg p-4">
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">{title}</h3>
-      <div className="space-y-2">
-        {children}
+        </div>
       </div>
     </div>
   )
 }
 
+function TechnicalInfo({ data }) {
+  if (!data?.electrical && !data?.mechanical && !data?.safety_compliance) return null
+  
+  return (
+    <div className="card">
+      <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <span className="mr-2">⚙️</span> Technical Specifications
+      </h3>
+      <div className="space-y-4">
+        {data?.electrical && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Electrical Specifications</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoRow label="Voltage" value={data.electrical.voltage} />
+              <InfoRow label="Amperage" value={data.electrical.amperage} />
+              <InfoRow label="Wattage" value={data.electrical.wattage} />
+              <InfoRow label="Resistance" value={data.electrical.resistance} />
+              <InfoRow label="Connector Type" value={data.electrical.connector_type} />
+              <InfoRow label="Bulb Type" value={data.electrical.bulb_type} />
+              <InfoRow label="Lumens" value={data.electrical.lumens} />
+              <InfoRow label="Color Temperature" value={data.electrical.color_temperature} />
+            </div>
+          </div>
+        )}
+
+        {data?.mechanical && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Mechanical Specifications</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoRow label="Size" value={data.mechanical.size} />
+              <InfoRow label="Thread Size" value={data.mechanical.thread_size} />
+              <InfoRow label="Flow Rate" value={data.mechanical.flow_rate} />
+              <InfoRow label="PSI Rating" value={data.mechanical.psi_rating} />
+              <InfoRow label="Temperature Range" value={data.mechanical.temperature_range} />
+              <InfoRow label="Capacity" value={data.mechanical.capacity} />
+            </div>
+          </div>
+        )}
+
+        {data?.safety_compliance && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Safety & Compliance</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoRow label="Prop 65 Warning" value={data.safety_compliance.prop65_warning} />
+              {data.safety_compliance.certifications && data.safety_compliance.certifications.length > 0 && (
+                <InfoRow label="Certifications" value={data.safety_compliance.certifications.join(', ')} />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CompatibilityInfo({ data, cross }) {
+  if (!data && !cross) return null
+  
+  return (
+    <div className="card">
+      <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <span className="mr-2">🔄</span> Compatibility & Cross Reference
+      </h3>
+      <div className="space-y-4">
+        {data && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Compatible With</h4>
+            <div className="grid grid-cols-2 gap-4">
+              {data?.compatible_brands && data.compatible_brands.length > 0 && (
+                <InfoRow label="Brands" value={data.compatible_brands.join(', ')} />
+              )}
+              {data?.compatible_appliance_types && data.compatible_appliance_types.length > 0 && (
+                <InfoRow label="Appliance Types" value={data.compatible_appliance_types.join(', ')} />
+              )}
+            </div>
+            {data?.compatible_models && data.compatible_models.length > 0 && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Compatible Models:</p>
+                <div className="text-sm text-gray-900 max-h-40 overflow-y-auto bg-gray-50 p-3 rounded">
+                  {data.compatible_models.map((model, idx) => (
+                    <div key={idx} className="py-1">{model}</div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {cross && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Cross Reference</h4>
+            <div className="grid grid-cols-2 gap-4">
+              {cross?.replaces_part_numbers && cross.replaces_part_numbers.length > 0 && (
+                <InfoRow label="Replaces" value={cross.replaces_part_numbers.join(', ')} />
+              )}
+              {cross?.superseded_part_numbers && cross.superseded_part_numbers.length > 0 && (
+                <InfoRow label="Superseded" value={cross.superseded_part_numbers.join(', ')} />
+              )}
+              {cross?.equivalent_parts && cross.equivalent_parts.length > 0 && (
+                <InfoRow label="Equivalents" value={cross.equivalent_parts.join(', ')} />
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SymptomsInfo({ data, description }) {
+  if (!data?.symptoms && !description) return null
+  
+  return (
+    <div className="card">
+      <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <span className="mr-2">🔧</span> Symptoms & Description
+      </h3>
+      <div className="space-y-4">
+        {data?.symptoms && data.symptoms.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Symptoms This Part Fixes</h4>
+            <ul className="space-y-2">
+              {data.symptoms.map((symptom, idx) => (
+                <li key={idx} className="flex items-start">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span className="text-sm text-gray-900">{symptom}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {description && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Description</h4>
+            {description?.short_description && (
+              <p className="text-sm text-gray-900 mb-3">{description.short_description}</p>
+            )}
+            {description?.long_description && (
+              <p className="text-sm text-gray-700">{description.long_description}</p>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function InstallationInfo({ data }) {
+  if (!data) return null
+  
+  return (
+    <div className="card">
+      <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <span className="mr-2">🛠️</span> Installation
+      </h3>
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-600 mb-2">Installation Details</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <InfoRow label="Difficulty" value={data?.installation_difficulty} />
+            {data?.tools_required && data.tools_required.length > 0 && (
+              <InfoRow label="Tools Required" value={data.tools_required.join(', ')} />
+            )}
+          </div>
+          {data?.safety_notes && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-3">
+              <p className="text-sm font-medium text-yellow-800 mb-1">⚠️ Safety Notes:</p>
+              <p className="text-sm text-yellow-700">{data.safety_notes}</p>
+            </div>
+          )}
+        </div>
+
+        {data?.installation_steps && data.installation_steps.length > 0 && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Installation Steps</h4>
+            <ol className="space-y-2">
+              {data.installation_steps.map((step, idx) => (
+                <li key={idx} className="flex items-start">
+                  <span className="font-bold text-primary-600 mr-3">{idx + 1}.</span>
+                  <span className="text-sm text-gray-900">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
+        <div className="mt-4">
+          <h4 className="text-sm font-semibold text-gray-600 mb-2">Resources</h4>
+          <div className="space-y-2">
+            {data?.documentation_url && (
+              <a href={data.documentation_url} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline text-sm block">
+                📄 Installation Manual
+              </a>
+            )}
+            {data?.video_url && (
+              <a href={data.video_url} target="_blank" rel="noopener noreferrer" className="text-primary-600 hover:underline text-sm block">
+                🎥 Installation Video
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ShippingInfo({ data, availability }) {
+  if (!data && !availability) return null
+  
+  return (
+    <div className="card">
+      <h3 className="text-lg font-semibold mb-4 flex items-center">
+        <span className="mr-2">📦</span> Shipping & Availability
+      </h3>
+      <div className="space-y-4">
+        {availability && (
+          <div>
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Availability</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoRow label="Stock Status" value={availability.stock_status} />
+              <InfoRow label="Restock ETA" value={availability.restock_eta} />
+              <InfoRow label="Delivery ETA" value={availability.delivery_eta} />
+            </div>
+          </div>
+        )}
+
+        {data && (
+          <div className="mt-4">
+            <h4 className="text-sm font-semibold text-gray-600 mb-2">Shipping Information</h4>
+            <div className="grid grid-cols-2 gap-4">
+              <InfoRow label="Shipping Weight" value={data?.shipping_weight} />
+              <InfoRow label="Shipping Dimensions" value={data?.shipping_dimensions} />
+              <InfoRow label="Estimated Ship Date" value={data?.estimated_ship_date} />
+            </div>
+            {data?.handling_notes && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-3">
+                <p className="text-sm font-medium text-blue-800 mb-1">📦 Handling Notes:</p>
+                <p className="text-sm text-blue-700">{data.handling_notes}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Helper components
 function InfoRow({ label, value }) {
   if (!value || value === 'null' || value === 'undefined') return null
   
   return (
-    <div className="flex justify-between py-2 border-b border-gray-200 last:border-0">
-      <span className="text-sm font-medium text-gray-600">{label}</span>
-      <span className="text-sm text-gray-900 text-right max-w-[60%]">{value}</span>
+    <div className="p-3 rounded-lg bg-gray-50">
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      <p className="font-semibold text-gray-900">{value}</p>
     </div>
   )
 }

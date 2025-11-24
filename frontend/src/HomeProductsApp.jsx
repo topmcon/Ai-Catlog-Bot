@@ -7,7 +7,6 @@ function HomeProductsApp() {
   const [productData, setProductData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState('identity')
   const [formData, setFormData] = useState({
     modelNumber: '',
     brand: '',
@@ -52,20 +51,7 @@ function HomeProductsApp() {
     setProductData(null)
     setError(null)
     setFormData({ modelNumber: '', brand: '', description: '' })
-    setActiveTab('identity')
   }
-
-  const tabs = [
-    { id: 'identity', label: 'Product Identity', icon: '🏷️' },
-    { id: 'physical', label: 'Physical Specs', icon: '📏' },
-    { id: 'technical', label: 'Technical Specs', icon: '⚙️' },
-    { id: 'installation', label: 'Installation', icon: '🔧' },
-    { id: 'compatibility', label: 'Compatibility', icon: '🔌' },
-    { id: 'environmental', label: 'Environmental', icon: '🌍' },
-    { id: 'certifications', label: 'Certifications', icon: '✅' },
-    { id: 'ai', label: 'AI Insights', icon: '🤖' },
-    { id: 'filtering', label: 'Filter Data', icon: '🔍' }
-  ]
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -302,259 +288,47 @@ function HomeProductsApp() {
                   </div>
                 )}
 
-                {/* Tabs */}
-                <div className="card">
-                  <div className="flex space-x-2 overflow-x-auto pb-2 mb-4">
-                    {tabs.map(tab => (
-                      <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        className={`px-4 py-2 rounded-lg whitespace-nowrap text-sm font-medium transition-colors ${
-                          activeTab === tab.id
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {tab.icon} {tab.label}
-                      </button>
-                    ))}
+                {/* Product Identity */}
+                {productData.product_identity && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">🏷️</span> Product Identity
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(productData.product_identity).map(([key, value]) => {
+                        if (!value) return null
+                        return (
+                          <div key={key} className="p-3 rounded-lg bg-gray-50">
+                            <p className="text-xs text-gray-500 mb-1">
+                              {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </p>
+                            <p className="font-semibold text-gray-900">{value}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </div>
+                )}
 
-                  {/* Tab Content */}
-                  <div className="space-y-3">
-                    {activeTab === 'identity' && productData.product_identity && (
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Product Identity</h3>
-                        {Object.entries(productData.product_identity).map(([key, value]) => {
-                          if (!value) return null
-                          return (
-                            <div key={key} className="flex border-b border-gray-100 pb-2">
-                              <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                              </span>
-                              <span className="text-gray-900 text-sm font-medium">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {activeTab === 'physical' && (
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Physical Attributes</h3>
-                        
-                        {productData.dimensions && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">📏 Dimensions</h4>
-                            {Object.entries(productData.dimensions).map(([key, value]) => {
-                              if (!value) return null
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{value}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {productData.material_construction && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🔨 Material & Construction</h4>
-                            {Object.entries(productData.material_construction).map(([key, value]) => {
-                              if (!value) return null
-                              const displayValue = Array.isArray(value) ? value.join(', ') : value
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{displayValue}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {productData.finish_color && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🎨 Finish & Color</h4>
-                            {Object.entries(productData.finish_color).map(([key, value]) => {
-                              if (!value) return null
-                              const displayValue = Array.isArray(value) ? value.join(', ') : value
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{displayValue}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {activeTab === 'technical' && (
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Technical Specifications</h3>
-                        
-                        {productData.mechanical_plumbing && Object.values(productData.mechanical_plumbing).some(v => v) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🚰 Plumbing Specs</h4>
-                            {Object.entries(productData.mechanical_plumbing).map(([key, value]) => {
-                              if (!value) return null
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{value}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {productData.electrical_specs && Object.values(productData.electrical_specs).some(v => v) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">⚡ Electrical Specs</h4>
-                            {Object.entries(productData.electrical_specs).map(([key, value]) => {
-                              if (!value) return null
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{value}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {productData.lighting_specs && Object.values(productData.lighting_specs).some(v => v) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">💡 Lighting Specs</h4>
-                            {Object.entries(productData.lighting_specs).map(([key, value]) => {
-                              if (!value) return null
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{value}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {productData.hvac_performance && Object.values(productData.hvac_performance).some(v => v) && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">❄️ HVAC Performance</h4>
-                            {Object.entries(productData.hvac_performance).map(([key, value]) => {
-                              if (!value) return null
-                              return (
-                                <div key={key} className="flex border-b border-gray-100 pb-2 mb-2">
-                                  <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                    {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                                  </span>
-                                  <span className="text-gray-900 text-sm font-medium">{value}</span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {activeTab === 'installation' && productData.installation && (
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Installation Requirements</h3>
-                        {Object.entries(productData.installation).map(([key, value]) => {
-                          if (!value) return null
-                          const displayValue = Array.isArray(value) ? (
-                            <ul className="list-disc list-inside space-y-1">
-                              {value.map((item, idx) => (
-                                <li key={idx} className="text-sm">{item}</li>
-                              ))}
-                            </ul>
-                          ) : value
-                          return (
-                            <div key={key} className="border-b border-gray-100 pb-2 mb-2">
-                              <div className="text-gray-600 text-sm font-medium mb-1">
-                                {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                              </div>
-                              <div className="text-gray-900 text-sm">{displayValue}</div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {activeTab === 'compatibility' && productData.compatibility && (
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Compatibility & Requirements</h3>
-                        {Object.entries(productData.compatibility).map(([key, value]) => {
-                          if (!value) return null
-                          const displayValue = Array.isArray(value) ? (
-                            <ul className="list-disc list-inside space-y-1">
-                              {value.map((item, idx) => (
-                                <li key={idx} className="text-sm">{item}</li>
-                              ))}
-                            </ul>
-                          ) : value
-                          return (
-                            <div key={key} className="border-b border-gray-100 pb-2 mb-2">
-                              <div className="text-gray-600 text-sm font-medium mb-1">
-                                {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                              </div>
-                              <div className="text-gray-900 text-sm">{displayValue}</div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {activeTab === 'environmental' && productData.environmental && (
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Environmental Ratings</h3>
-                        {Object.entries(productData.environmental).map(([key, value]) => {
-                          if (!value) return null
-                          return (
-                            <div key={key} className="flex border-b border-gray-100 pb-2">
-                              <span className="text-gray-600 text-sm w-40 flex-shrink-0">
-                                {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:
-                              </span>
-                              <span className="text-gray-900 text-sm font-medium">{value}</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-
-                    {activeTab === 'certifications' && productData.certifications && (
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Certifications & Compliance</h3>
+                {/* Physical Attributes */}
+                {(productData.dimensions || productData.material_construction || productData.finish_color) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">📏</span> Physical Attributes
+                    </h3>
+                    
+                    {productData.dimensions && Object.values(productData.dimensions).some(v => v) && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-2">Dimensions</h4>
                         <div className="grid grid-cols-2 gap-4">
-                          {Object.entries(productData.certifications).map(([key, value]) => {
+                          {Object.entries(productData.dimensions).map(([key, value]) => {
                             if (!value) return null
-                            const isYes = value.toLowerCase() === 'yes' || value.toLowerCase() === 'true'
                             return (
-                              <div key={key} className={`p-3 rounded-lg ${isYes ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xl">{isYes ? '✅' : '📋'}</span>
-                                  <div>
-                                    <div className="text-sm font-medium text-gray-900">
-                                      {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                    </div>
-                                    <div className="text-xs text-gray-600">{value}</div>
-                                  </div>
-                                </div>
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className="font-semibold text-gray-900">{value}</p>
                               </div>
                             )
                           })}
@@ -562,87 +336,39 @@ function HomeProductsApp() {
                       </div>
                     )}
 
-                    {activeTab === 'ai' && productData.ai_enrichment && (
-                      <div className="space-y-4">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">AI-Generated Insights</h3>
-                        
-                        {productData.ai_enrichment.one_sentence_highlight && (
-                          <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
-                            <div className="text-sm font-semibold text-purple-700 mb-1">✨ Highlight</div>
-                            <div className="text-gray-800">{productData.ai_enrichment.one_sentence_highlight}</div>
-                          </div>
-                        )}
-
-                        {productData.ai_enrichment.key_features && productData.ai_enrichment.key_features.length > 0 && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🔑 Key Features</h4>
-                            <ul className="space-y-2">
-                              {productData.ai_enrichment.key_features.map((feature, idx) => (
-                                <li key={idx} className="flex items-start">
-                                  <span className="text-blue-500 mr-2">•</span>
-                                  <span className="text-sm text-gray-700">{feature}</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {productData.ai_enrichment.detailed_description && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">📝 Description</h4>
-                            <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.detailed_description}</p>
-                          </div>
-                        )}
-
-                        {productData.ai_enrichment.why_this_product && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">💎 Why This Product?</h4>
-                            <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.why_this_product}</p>
-                          </div>
-                        )}
-
-                        {productData.ai_enrichment.installation_notes && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🔧 Installation Notes</h4>
-                            <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.installation_notes}</p>
-                          </div>
-                        )}
-
-                        {productData.ai_enrichment.compatibility_notes && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🔌 Compatibility Notes</h4>
-                            <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.compatibility_notes}</p>
-                          </div>
-                        )}
-
-                        {productData.ai_enrichment.seo_keywords && productData.ai_enrichment.seo_keywords.length > 0 && (
-                          <div>
-                            <h4 className="font-semibold text-gray-700 mb-2">🏷️ SEO Keywords</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {productData.ai_enrichment.seo_keywords.map((keyword, idx) => (
-                                <span key={idx} className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
-                                  {keyword}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {activeTab === 'filtering' && productData.filtering && (
-                      <div className="space-y-2">
-                        <h3 className="font-bold text-lg text-gray-800 mb-3">Filtering & Search Data</h3>
-                        <div className="grid grid-cols-2 gap-3">
-                          {Object.entries(productData.filtering).map(([key, value]) => {
+                    {productData.material_construction && Object.values(productData.material_construction).some(v => v) && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-2">Material & Construction</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(productData.material_construction).map(([key, value]) => {
                             if (!value) return null
                             const displayValue = Array.isArray(value) ? value.join(', ') : value
                             return (
-                              <div key={key} className="bg-gray-50 p-3 rounded-lg">
-                                <div className="text-xs text-gray-500 mb-1">
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
                                   {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </div>
-                                <div className="text-sm text-gray-900 font-medium">{displayValue}</div>
+                                </p>
+                                <p className="font-semibold text-gray-900">{displayValue}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {productData.finish_color && Object.values(productData.finish_color).some(v => v) && (
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">Finish & Color</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(productData.finish_color).map(([key, value]) => {
+                            if (!value) return null
+                            const displayValue = Array.isArray(value) ? value.join(', ') : value
+                            return (
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className="font-semibold text-gray-900">{displayValue}</p>
                               </div>
                             )
                           })}
@@ -650,7 +376,295 @@ function HomeProductsApp() {
                       </div>
                     )}
                   </div>
-                </div>
+                )}
+
+                {/* Technical Specifications */}
+                {(productData.mechanical_plumbing || productData.electrical_specs || productData.lighting_specs || productData.hvac_performance) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">⚙️</span> Technical Specifications
+                    </h3>
+                    
+                    {productData.mechanical_plumbing && Object.values(productData.mechanical_plumbing).some(v => v) && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-2">🚰 Plumbing Specs</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(productData.mechanical_plumbing).map(([key, value]) => {
+                            if (!value) return null
+                            return (
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className="font-semibold text-gray-900">{value}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {productData.electrical_specs && Object.values(productData.electrical_specs).some(v => v) && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-2">⚡ Electrical Specs</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(productData.electrical_specs).map(([key, value]) => {
+                            if (!value) return null
+                            return (
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className="font-semibold text-gray-900">{value}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {productData.lighting_specs && Object.values(productData.lighting_specs).some(v => v) && (
+                      <div className="mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-2">💡 Lighting Specs</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(productData.lighting_specs).map(([key, value]) => {
+                            if (!value) return null
+                            return (
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className="font-semibold text-gray-900">{value}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {productData.hvac_performance && Object.values(productData.hvac_performance).some(v => v) && (
+                      <div>
+                        <h4 className="font-semibold text-gray-700 mb-2">❄️ HVAC Performance</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {Object.entries(productData.hvac_performance).map(([key, value]) => {
+                            if (!value) return null
+                            return (
+                              <div key={key} className="p-3 rounded-lg bg-gray-50">
+                                <p className="text-xs text-gray-500 mb-1">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </p>
+                                <p className="font-semibold text-gray-900">{value}</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Installation */}
+                {productData.installation && Object.values(productData.installation).some(v => v) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">🔧</span> Installation Requirements
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(productData.installation).map(([key, value]) => {
+                        if (!value) return null
+                        const displayValue = Array.isArray(value) ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            {value.map((item, idx) => (
+                              <li key={idx} className="text-sm">{item}</li>
+                            ))}
+                          </ul>
+                        ) : value
+                        return (
+                          <div key={key} className="p-3 rounded-lg bg-gray-50">
+                            <p className="text-xs text-gray-500 mb-1">
+                              {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </p>
+                            <div className="font-semibold text-gray-900">{displayValue}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Compatibility */}
+                {productData.compatibility && Object.values(productData.compatibility).some(v => v) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">🔌</span> Compatibility & Requirements
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(productData.compatibility).map(([key, value]) => {
+                        if (!value) return null
+                        const displayValue = Array.isArray(value) ? (
+                          <ul className="list-disc list-inside space-y-1">
+                            {value.map((item, idx) => (
+                              <li key={idx} className="text-sm">{item}</li>
+                            ))}
+                          </ul>
+                        ) : value
+                        return (
+                          <div key={key} className="p-3 rounded-lg bg-gray-50">
+                            <p className="text-xs text-gray-500 mb-1">
+                              {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </p>
+                            <div className="font-semibold text-gray-900">{displayValue}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Environmental */}
+                {productData.environmental && Object.values(productData.environmental).some(v => v) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">🌍</span> Environmental Ratings
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(productData.environmental).map(([key, value]) => {
+                        if (!value) return null
+                        return (
+                          <div key={key} className="p-3 rounded-lg bg-gray-50">
+                            <p className="text-xs text-gray-500 mb-1">
+                              {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </p>
+                            <p className="font-semibold text-gray-900">{value}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Certifications */}
+                {productData.certifications && Object.values(productData.certifications).some(v => v) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">✅</span> Certifications & Compliance
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {Object.entries(productData.certifications).map(([key, value]) => {
+                        if (!value) return null
+                        const isYes = value.toLowerCase() === 'yes' || value.toLowerCase() === 'true'
+                        return (
+                          <div key={key} className={`p-3 rounded-lg ${isYes ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xl">{isYes ? '✅' : '📋'}</span>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                </div>
+                                <div className="text-xs text-gray-600">{value}</div>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Enrichment */}
+                {productData.ai_enrichment && Object.values(productData.ai_enrichment).some(v => v) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">🤖</span> AI-Generated Insights
+                    </h3>
+                    <div className="space-y-4">
+                      {productData.ai_enrichment.one_sentence_highlight && (
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
+                          <div className="text-sm font-semibold text-purple-700 mb-1">✨ Highlight</div>
+                          <div className="text-gray-800">{productData.ai_enrichment.one_sentence_highlight}</div>
+                        </div>
+                      )}
+
+                      {productData.ai_enrichment.key_features && productData.ai_enrichment.key_features.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">🔑 Key Features</h4>
+                          <ul className="space-y-2">
+                            {productData.ai_enrichment.key_features.map((feature, idx) => (
+                              <li key={idx} className="flex items-start">
+                                <span className="text-blue-500 mr-2">•</span>
+                                <span className="text-sm text-gray-700">{feature}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {productData.ai_enrichment.detailed_description && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">📝 Description</h4>
+                          <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.detailed_description}</p>
+                        </div>
+                      )}
+
+                      {productData.ai_enrichment.why_this_product && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">💎 Why This Product?</h4>
+                          <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.why_this_product}</p>
+                        </div>
+                      )}
+
+                      {productData.ai_enrichment.installation_notes && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">🔧 Installation Notes</h4>
+                          <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.installation_notes}</p>
+                        </div>
+                      )}
+
+                      {productData.ai_enrichment.compatibility_notes && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">🔌 Compatibility Notes</h4>
+                          <p className="text-sm text-gray-700 leading-relaxed">{productData.ai_enrichment.compatibility_notes}</p>
+                        </div>
+                      )}
+
+                      {productData.ai_enrichment.seo_keywords && productData.ai_enrichment.seo_keywords.length > 0 && (
+                        <div>
+                          <h4 className="font-semibold text-gray-700 mb-2">🏷️ SEO Keywords</h4>
+                          <div className="flex flex-wrap gap-2">
+                            {productData.ai_enrichment.seo_keywords.map((keyword, idx) => (
+                              <span key={idx} className="bg-blue-100 text-blue-800 text-xs px-3 py-1 rounded-full">
+                                {keyword}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Filtering */}
+                {productData.filtering && Object.values(productData.filtering).some(v => v) && (
+                  <div className="card">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center">
+                      <span className="mr-2">🔍</span> Filtering & Search Data
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(productData.filtering).map(([key, value]) => {
+                        if (!value) return null
+                        const displayValue = Array.isArray(value) ? value.join(', ') : value
+                        return (
+                          <div key={key} className="bg-gray-50 p-3 rounded-lg">
+                            <div className="text-xs text-gray-500 mb-1">
+                              {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                            </div>
+                            <div className="text-sm text-gray-900 font-medium">{displayValue}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
