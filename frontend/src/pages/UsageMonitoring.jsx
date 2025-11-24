@@ -53,21 +53,25 @@ export default function UsageMonitoring() {
         const data = await response.json()
         setPortalStats(data.portals)
         setSourceStats({
-          ui_calls: data.totals.ui_calls,
-          api_calls: data.totals.api_calls
+          ui_calls: data.totals.ui_calls || 0,
+          api_calls: data.totals.api_calls || 0
         })
         setRequestLogs(data.recent_logs || [])
-        setStats({
-          totalRequests: data.totals.total_requests,
-          successfulRequests: data.totals.successful_requests,
-          failedRequests: data.totals.failed_requests,
-          totalCost: (data.totals.total_requests * 0.001).toFixed(3), // Estimate
-          averageResponseTime: (
-            (data.portals.catalog.avg_response_time + 
+        
+        // Calculate average response time safely
+        const avgResponseTime = data.totals.total_requests > 0
+          ? ((data.portals.catalog.avg_response_time + 
              data.portals.parts.avg_response_time + 
-             data.portals.home_products.avg_response_time) / 3
-          ).toFixed(1),
-          todayRequests: data.totals.total_requests // Simplified
+             data.portals.home_products.avg_response_time) / 3).toFixed(1)
+          : "0.0"
+        
+        setStats({
+          totalRequests: data.totals.total_requests || 0,
+          successfulRequests: data.totals.successful_requests || 0,
+          failedRequests: data.totals.failed_requests || 0,
+          totalCost: ((data.totals.total_requests || 0) * 0.001).toFixed(3),
+          averageResponseTime: avgResponseTime,
+          todayRequests: data.totals.total_requests || 0
         })
       }
       setLoading(false)
@@ -117,14 +121,20 @@ export default function UsageMonitoring() {
   ]
 
   const exportToCSV = () => {
-    const headers = ['Timestamp', 'Brand', 'Model', 'Status', 'Response Time (s)', 'Cost ($)']
+    if (requestLogs.length === 0) {
+      alert('No data to export')
+      return
+    }
+    
+    const headers = ['Timestamp', 'Portal', 'Source', 'Brand', 'Model Number', 'Status', 'Response Time (s)']
     const rows = requestLogs.map(log => [
       log.timestamp,
-      log.brand,
-      log.model,
-      log.status,
-      log.responseTime,
-      log.cost
+      log.portal,
+      log.source,
+      log.brand || '',
+      log.model_number || '',
+      log.success ? 'success' : 'failed',
+      log.response_time
     ])
 
     const csv = [
