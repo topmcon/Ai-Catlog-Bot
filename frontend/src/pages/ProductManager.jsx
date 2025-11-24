@@ -1,73 +1,53 @@
 import { useState, useEffect } from 'react'
-import { format } from 'date-fns'
+import { API_URL, API_KEY } from '../config/api'
 
 export default function ProductManager() {
   const [products, setProducts] = useState([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState('all')
+  const [filterPortal, setFilterPortal] = useState('all')
   const [selectedProducts, setSelectedProducts] = useState([])
   const [showUpload, setShowUpload] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [lastRefresh, setLastRefresh] = useState(null)
 
   useEffect(() => {
     loadProducts()
+    const interval = setInterval(loadProducts, 30000) // Refresh every 30 seconds
+    return () => clearInterval(interval)
   }, [])
 
-  const loadProducts = () => {
-    // Load from localStorage or generate mock data
-    const saved = localStorage.getItem('catalogbot_products')
-    if (saved) {
-      setProducts(JSON.parse(saved))
-    } else {
-      // Generate mock product history
-      const mockProducts = [
-        {
-          id: 1,
-          brand: 'Fisher & Paykel',
-          model: 'OS24NDB1',
-          enrichedAt: new Date(Date.now() - 86400000).toISOString(),
-          status: 'success',
-          cost: 0.0012,
-          responseTime: 12.4
-        },
-        {
-          id: 2,
-          brand: 'Miele',
-          model: 'H6880BP',
-          enrichedAt: new Date(Date.now() - 172800000).toISOString(),
-          status: 'success',
-          cost: 0.0011,
-          responseTime: 11.8
-        },
-        {
-          id: 3,
-          brand: 'Bosch',
-          model: 'HBL8451UC',
-          enrichedAt: new Date(Date.now() - 259200000).toISOString(),
-          status: 'success',
-          cost: 0.0013,
-          responseTime: 13.2
-        },
-        {
-          id: 4,
-          brand: 'Samsung',
-          model: 'NE63T8751SG',
-          enrichedAt: new Date(Date.now() - 345600000).toISOString(),
-          status: 'failed',
-          cost: 0,
-          responseTime: 0
-        },
-        {
-          id: 5,
-          brand: 'LG',
-          model: 'LRFVS3006S',
-          enrichedAt: new Date(Date.now() - 432000000).toISOString(),
-          status: 'success',
-          cost: 0.0014,
-          responseTime: 14.1
+  const loadProducts = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_URL}/portal-metrics`, {
+        headers: {
+          'X-API-KEY': API_KEY
         }
-      ]
-      setProducts(mockProducts)
-      localStorage.setItem('catalogbot_products', JSON.stringify(mockProducts))
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Convert recent_logs to product entries
+        const productEntries = data.recent_logs.map((log, index) => ({
+          id: `${log.timestamp}-${index}`,
+          brand: log.brand || 'Unknown',
+          model: log.model_number || 'Unknown',
+          portal: log.portal || 'unknown',
+          source: log.source || 'unknown',
+          enrichedAt: log.timestamp,
+          status: log.success ? 'success' : 'failed',
+          cost: 0.001, // Estimated cost per request
+          responseTime: log.response_time || 0
+        }))
+        
+        setProducts(productEntries)
+        setLastRefresh(new Date().toLocaleTimeString())
+      }
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to load products:', error)
+      setLoading(false)
     }
   }
 
@@ -75,7 +55,8 @@ export default function ProductManager() {
     const matchesSearch = product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.model.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || product.status === filterStatus
-    return matchesSearch && matchesStatus
+    const matchesPortal = filterPortal === 'all' || product.portal === filterPortal
+    return matchesSearch && matchesStatus && matchesPortal
   })
 
   const toggleSelectProduct = (id) => {
@@ -105,22 +86,22 @@ export default function ProductManager() {
     alert(`Re-enriching ${selectedProducts.length} products... (This would call the API in production)`)
   }
 
-  const exportProducts = (format) => {
+  const exportProducts = (exportFormat) => {
     const selectedData = products.filter(p => selectedProducts.includes(p.id))
     const data = selectedData.length > 0 ? selectedData : filteredProducts
 
-    if (format === 'json') {
+    if (exportFormat === 'json') {
       const json = JSON.stringify(data, null, 2)
       downloadFile(json, 'products.json', 'application/json')
-    } else if (format === 'csv') {
-      const headers = ['ID', 'Brand', 'Model', 'Status', 'Enriched At', 'Cost', 'Response Time']
+    } else if (exportFormat === 'csv') {
+      const headers = ['Brand', 'Model', 'Portal', 'Source', 'Status', 'Enriched At', 'Response Time']
       const rows = data.map(p => [
-        p.id,
         p.brand,
         p.model,
+        p.portal,
+        p.source,
         p.status,
-        format(new Date(p.enrichedAt), 'yyyy-MM-dd HH:mm:ss'),
-        p.cost,
+        new Date(p.enrichedAt).toISOString(),
         p.responseTime
       ])
       const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
@@ -178,17 +159,34 @@ export default function ProductManager() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">Product Manager</h2>
-        <p className="text-gray-600 mt-1">Manage enriched products and batch operations</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Product Manager</h2>
+          <p className="text-gray-600 mt-1">View all enriched products from all portals</p>
+          {lastRefresh && (
+            <p className="text-sm text-gray-500 mt-1">Last updated: {lastRefresh}</p>
+          )}
+        </div>
+        <button
+          onClick={loadProducts}
+          disabled={loading}
+          className={`px-4 py-2 rounded-lg font-medium ${
+            loading
+              ? 'bg-gray-300 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700 text-white'
+          }`}
+        >
+          {loading ? '⏳ Loading...' : '🔄 Refresh'}
+        </button>
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <StatCard icon="📦" label="Total Products" value={products.length} />
         <StatCard icon="✅" label="Successful" value={products.filter(p => p.status === 'success').length} />
         <StatCard icon="❌" label="Failed" value={products.filter(p => p.status === 'failed').length} />
-        <StatCard icon="⏳" label="Pending" value={products.filter(p => p.status === 'pending').length} />
+        <StatCard icon="🛍️" label="Catalog" value={products.filter(p => p.portal === 'catalog').length} />
+        <StatCard icon="🔧" label="Parts" value={products.filter(p => p.portal === 'parts').length} />
       </div>
 
       {/* Actions Bar */}
@@ -258,7 +256,7 @@ export default function ProductManager() {
 
       {/* Search and Filter */}
       <div className="bg-white rounded-xl shadow-md p-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="md:col-span-2">
             <input
               type="text"
@@ -268,6 +266,16 @@ export default function ProductManager() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
+          <select
+            value={filterPortal}
+            onChange={(e) => setFilterPortal(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="all">All Portals</option>
+            <option value="catalog">🛍️ Catalog</option>
+            <option value="parts">🔧 Parts</option>
+            <option value="home_products">🏠 Home Products</option>
+          </select>
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -313,13 +321,13 @@ export default function ProductManager() {
                       className="rounded"
                     />
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">ID</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Brand</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Model</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Portal</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Source</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Status</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Enriched At</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Cost</th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Time</th>
+                  <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Response Time</th>
                   <th className="text-left py-3 px-4 text-sm font-medium text-gray-700">Actions</th>
                 </tr>
               </thead>
@@ -334,23 +342,32 @@ export default function ProductManager() {
                         className="rounded"
                       />
                     </td>
-                    <td className="py-3 px-4 text-sm text-gray-600">#{product.id}</td>
                     <td className="py-3 px-4 text-sm text-gray-900 font-medium">{product.brand}</td>
                     <td className="py-3 px-4 text-sm text-gray-600">{product.model}</td>
+                    <td className="py-3 px-4 text-sm">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        product.portal === 'catalog' ? 'bg-blue-100 text-blue-700' :
+                        product.portal === 'parts' ? 'bg-green-100 text-green-700' :
+                        product.portal === 'home_products' ? 'bg-purple-100 text-purple-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {product.portal}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-sm text-gray-600">
+                      {product.source === 'ui' ? '🖥️ UI' : '🔌 API'}
+                    </td>
                     <td className="py-3 px-4">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         product.status === 'success' ? 'bg-green-100 text-green-800' :
                         product.status === 'failed' ? 'bg-red-100 text-red-800' :
                         'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {product.status}
+                        {product.status === 'success' ? '✅ Success' : '❌ Failed'}
                       </span>
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600">
-                      {format(new Date(product.enrichedAt), 'MMM dd, yyyy HH:mm')}
-                    </td>
-                    <td className="py-3 px-4 text-sm text-gray-600 font-mono">
-                      ${product.cost.toFixed(4)}
+                      {new Date(product.enrichedAt).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-600 font-mono">
                       {product.responseTime > 0 ? `${product.responseTime}s` : '-'}
