@@ -34,6 +34,13 @@ from home_products import (
     calculate_home_product_completeness
 )
 
+# Import verification module
+from verification import (
+    validate_product_data,
+    get_verification_summary,
+    add_verification_metadata
+)
+
 # Initialize FastAPI app
 app = FastAPI(
     title="Catalog-BOT API",
@@ -744,15 +751,27 @@ async def enrich_product(
     try:
         # Call OpenAI to generate product data
         product_data = await generate_product_data(request.brand, request.model_number)
+        
+        # Validate data against 2-source verification requirements
+        validation_result = validate_product_data(
+            product_data.model_dump() if hasattr(product_data, 'model_dump') else product_data,
+            portal='catalog',
+            strict_mode=True  # Null out unverified critical fields
+        )
+        
         success = True
         response_time = time.time() - start_time
         update_portal_metrics("catalog", success, response_time, source, user_agent, 
                              request.model_number, request.brand)
         
-        return EnrichResponse(
-            success=True,
-            data=product_data
-        )
+        # Prepare response with verification metadata
+        response_data = {
+            "success": True,
+            "data": validation_result['data']
+        }
+        response_data = add_verification_metadata(response_data, validation_result)
+        
+        return response_data
     
     except Exception as e:
         response_time = time.time() - start_time
@@ -831,16 +850,27 @@ async def enrich_appliance_part(
                 update_portal_metrics("parts", success, response_time, source, user_agent,
                                      request.part_number, request.brand)
                 
-                return PartEnrichResponse(
-                    success=True,
-                    data=part_record.dict(),
-                    metrics={
+                # Validate part data against 2-source verification requirements
+                validation_result = validate_product_data(
+                    part_record.dict(),
+                    portal='parts',
+                    strict_mode=True
+                )
+                
+                # Prepare response with verification metadata
+                response_data = {
+                    "success": True,
+                    "data": validation_result['data'],
+                    "metrics": {
                         "provider": provider_name,
                         "response_time": f"{metrics['response_time']:.2f}s",
                         "tokens_used": metrics['tokens_used'],
                         "completeness": f"{metrics['completeness']:.1f}%"
                     }
-                )
+                }
+                response_data = add_verification_metadata(response_data, validation_result)
+                
+                return PartEnrichResponse(**response_data)
                 
             except Exception as e:
                 last_error = str(e)
@@ -940,6 +970,31 @@ ADDITIONAL FIELDS TO INCLUDE:
 - "msrp_sources": ["actual", "source", "names"]
 - "msrp_source_count": number (0, 2, 3+)
 - "msrp_verified": true only if 2+ matching sources, false otherwise
+
+⚠️ UNIVERSAL FIELD VERIFICATION - ALL CRITICAL FIELDS REQUIRE 2+ SOURCES:
+
+Apply the SAME 2-source verification standard to these critical fields:
+- brand, model_number, product_title (basic identification)
+- upc_gtin (barcode - critical for inventory)
+- country_of_origin, release_year (provenance)
+- series_collection, finish_color (product line identification)
+- warranty (commercial terms)
+
+FIELD VERIFICATION RULES:
+1. **2+ sources AGREE** → Populate field with verified data
+2. **1 source only** → Set field to null (insufficient verification)
+3. **2+ sources CONFLICT** → Set field to null (cannot verify)
+4. **No sources found** → Set field to null
+
+For fields that cannot be verified:
+- Set value to null
+- Do NOT guess or estimate
+- Better to return null than incorrect data
+
+DIMENSION & WEIGHT VERIFICATION:
+- Dimensions and weights must have 2+ matching sources
+- Acceptable variation: ±0.5 inches for dimensions, ±1 lb for weight
+- If sources vary beyond this, set to null
 
 You must return ONLY valid JSON matching this comprehensive structure for appliances:
 
@@ -1364,9 +1419,17 @@ async def enrich_home_product_endpoint(
     update_portal_metrics("home_products", True, total_time, source, user_agent,
                          request.model_number, request.brand)
     
-    return {
+    # Validate data against 2-source verification requirements
+    validation_result = validate_product_data(
+        enriched_data,
+        portal='home_products',
+        strict_mode=True
+    )
+    
+    # Prepare response with verification metadata
+    response_data = {
         "success": True,
-        "data": enriched_data,
+        "data": validation_result['data'],
         "metadata": {
             "ai_provider": provider_used,
             "response_time": round(total_time, 2),
@@ -1377,6 +1440,9 @@ async def enrich_home_product_endpoint(
             "description": request.description
         }
     }
+    response_data = add_verification_metadata(response_data, validation_result)
+    
+    return response_data
 
 @app.get("/home-products-ai-metrics")
 async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):

@@ -174,6 +174,33 @@ ADD THESE FIELDS TO core_identification:
 - "price_source_count": number of sources found
 - "price_verified": true only if 2+ matching sources
 
+⚠️ UNIVERSAL FIELD VERIFICATION - CRITICAL FIELDS REQUIRE 2+ SOURCES:
+
+Apply 2-source verification to these essential fields:
+- part_number, brand, part_name (core identification)
+- upc (barcode - critical for inventory matching)
+- condition, is_oem (authenticity verification)
+- warranty (commercial terms)
+
+TECHNICAL SPECIFICATION VERIFICATION:
+For technical specs (voltage, amperage, wattage, dimensions, weight):
+- **2+ sources MATCH** → Populate field
+- **1 source only** → Set to null
+- **Sources CONFLICT** → Set to null
+- Acceptable tolerance: ±5% for electrical specs, ±10% for dimensions/weight
+
+COMPATIBILITY VERIFICATION:
+For compatible_models and replaces_part_numbers:
+- Require 2+ sources OR official OEM documentation
+- If only 1 aftermarket source → set to null
+- Cross-reference data must be verifiable
+
+VERIFICATION STANDARD:
+✅ 2+ matching sources → Populate
+❌ 1 source only → Set null
+❌ Conflicting sources → Set null
+❌ No sources → Set null
+
 Part Number: {part_number}
 Brand: {brand}
 

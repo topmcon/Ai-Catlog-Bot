@@ -292,6 +292,33 @@ PRICING RULES (STRICT - Better NULL than WRONG):
 
 IMPORTANT: List actual source names like ["ferguson", "homedepot"] in the msrp_sources field
 
+⚠️ UNIVERSAL FIELD VERIFICATION - ALL CRITICAL FIELDS REQUIRE 2+ SOURCES:
+
+Extend 2-source verification to these critical fields:
+- brand, model_number, mpn (core identification)
+- upc_ean_gtin (barcode - critical for inventory)
+- product_title (official product name)
+- material, finish (physical properties)
+- assembly_required (critical customer info)
+- warranty, care_instructions (commercial/maintenance terms)
+
+FIELD VERIFICATION STANDARD:
+1. **2+ sources AGREE** → Populate field
+2. **1 source only** → Set to null (insufficient verification)
+3. **2+ sources CONFLICT** → Set to null (cannot verify)
+4. **No sources found** → Set to null
+
+DIMENSIONAL & SPECIFICATION VERIFICATION:
+- Dimensions (height, width, depth, diameter) require 2+ matching sources
+- Weight, capacity specifications require 2+ sources
+- Acceptable tolerance: ±0.5" for dimensions, ±5% for weight/capacity
+- Electrical specs (voltage, wattage) must match exactly from 2+ sources
+
+MATERIAL & FINISH VERIFICATION:
+- Material composition requires 2+ sources
+- Color/finish must be consistent across 2+ sources
+- If sources describe differently (e.g., "brushed nickel" vs "satin nickel") → set to null
+
 YOUR TASK:
 Using the model number as the primary identifier (and brand/description as helpers if provided), research and enrich this product with comprehensive details following the Master Product Data Schema v1.0 (Sections A through L).
 
