@@ -150,18 +150,44 @@ export default function SystemStatus() {
 
   const checkAPIAuth = async () => {
     try {
-      const response = await fetch(`${API_URL}/enrich`, {
+      // Test 1: Request without API key should fail
+      const unauthorizedResponse = await fetch(`${API_URL}/enrich`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ brand: 'Test', model_number: 'Test' })
       })
       
-      if (response.status === 401) {
+      // Test 2: Request with valid API key should work
+      const authorizedResponse = await fetch(`${API_URL}/enrich`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-API-KEY': API_KEY
+        },
+        body: JSON.stringify({ brand: 'Delta', model_number: 'RP50587' })
+      })
+      
+      // Auth is working if:
+      // 1. Request without key is rejected (401 or 403)
+      // 2. Request with key is accepted (200 or processes the request)
+      const authRejectsUnauthorized = unauthorizedResponse.status === 401 || unauthorizedResponse.status === 403
+      const authAcceptsAuthorized = authorizedResponse.status === 200 || authorizedResponse.ok
+      
+      if (authRejectsUnauthorized && authAcceptsAuthorized) {
         setSystemChecks(prev => ({
           ...prev,
           apiAuth: {
             status: 'healthy',
-            message: 'API authentication working',
+            message: 'API authentication enforced correctly',
+            lastChecked: new Date().toISOString()
+          }
+        }))
+      } else if (authRejectsUnauthorized) {
+        setSystemChecks(prev => ({
+          ...prev,
+          apiAuth: {
+            status: 'warning',
+            message: 'Auth rejects unauthorized but authorized request failed',
             lastChecked: new Date().toISOString()
           }
         }))
@@ -169,8 +195,8 @@ export default function SystemStatus() {
         setSystemChecks(prev => ({
           ...prev,
           apiAuth: {
-            status: 'warning',
-            message: 'Authentication check inconclusive',
+            status: 'error',
+            message: 'API authentication not enforcing properly',
             lastChecked: new Date().toISOString()
           }
         }))
@@ -180,7 +206,7 @@ export default function SystemStatus() {
         ...prev,
         apiAuth: {
           status: 'error',
-          message: 'Cannot verify API auth',
+          message: `Auth check error: ${error.message}`,
           lastChecked: new Date().toISOString()
         }
       }))
