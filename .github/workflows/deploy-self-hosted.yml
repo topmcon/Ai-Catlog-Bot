@@ -57,9 +57,13 @@ jobs:
           npm install
           npm run build
           
-          # Copy standalone HTML files to dist
-          cp index-catalog.html dist/ 2>/dev/null || echo "No index-catalog.html to copy"
-          cp hub.html dist/ 2>/dev/null || echo "No hub.html to copy"
+          # Copy standalone HTML files to dist (if any exist outside of build)
+          cp index-catalog.html dist/ 2>/dev/null || echo "index-catalog.html built by Vite"
+          cp hub.html dist/ 2>/dev/null || echo "hub.html built by Vite"
+          
+          # Verify all portal files are present
+          echo "Checking built files:"
+          ls -la dist/*.html
       
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.8.0
