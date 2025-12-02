@@ -1556,7 +1556,15 @@ async def lookup_ferguson_product(
         from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
         from dataclasses import asdict
         
-        with UnwrangleFergusonScraper() as scraper:
+        # Get Unwrangle API key from environment
+        unwrangle_api_key = os.getenv("UNWRANGLE_API_KEY")
+        if not unwrangle_api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="Unwrangle API key not configured on server"
+            )
+        
+        with UnwrangleFergusonScraper(api_key=unwrangle_api_key) as scraper:
             product = scraper.scrape_model(request.model_number)
             
             if not product:

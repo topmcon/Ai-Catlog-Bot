@@ -26,9 +26,6 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from dotenv import load_dotenv
 
-# Load environment variables
-load_dotenv()
-
 # Rich console for pretty logging
 console = Console()
 
@@ -540,6 +537,9 @@ Examples:
     )
     
     args = parser.parse_args()
+    
+    # Load environment variables for CLI usage
+    load_dotenv()
     
     # Validate API key
     api_key = args.api_key or os.getenv("UNWRANGLE_API_KEY")
