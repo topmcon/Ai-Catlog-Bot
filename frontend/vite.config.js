@@ -10,7 +10,8 @@ export default defineConfig({
         main: resolve(__dirname, 'index.html'),
         admin: resolve(__dirname, 'admin.html'),
         parts: resolve(__dirname, 'parts.html'),
-        homeProducts: resolve(__dirname, 'home-products.html')
+        homeProducts: resolve(__dirname, 'home-products.html'),
+        ferguson: resolve(__dirname, 'ferguson.html')
       }
     }
   },

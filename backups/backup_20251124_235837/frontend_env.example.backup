@@ -1,0 +1,3 @@
+# Environment variables for production
+VITE_API_URL=https://api.cxc-ai.com
+VITE_API_KEY=catbot123

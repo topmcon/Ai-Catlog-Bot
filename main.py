@@ -1505,6 +1505,111 @@ async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):
         "timestamp": datetime.utcnow().isoformat()
     }
 
+# Ferguson Product Lookup Endpoint (Unwrangle Integration)
+class FergusonLookupRequest(BaseModel):
+    model_number: str = Field(..., description="Product model number to lookup")
+
+@app.post("/lookup-ferguson")
+async def lookup_ferguson_product(
+    request: FergusonLookupRequest,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Lookup product data from Ferguson/Build.com using Unwrangle API.
+    Accepts model number (e.g., "K-2362-8") instead of full URL.
+    """
+    # Validate API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    start_time = time.time()
+    
+    try:
+        import subprocess
+        import json as json_lib
+        
+        # Call the unwrangle scraper script
+        result = subprocess.run(
+            [
+                'python3',
+                'unwrangle_ferguson_scraper.py',
+                request.model_number
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60  # 60 second timeout
+        )
+        
+        # Parse the output - look for JSON in stdout
+        if result.returncode != 0:
+            error_msg = result.stderr or "Scraper failed"
+            raise Exception(f"Scraper error: {error_msg}")
+        
+        # The scraper prints product data to stdout
+        # We need to capture it and return as JSON
+        # For now, return a success message and guide to use the scraper directly
+        
+        # Import the scraper module directly instead
+        import sys
+        sys.path.insert(0, '/workspaces/Ai-Catlog-Bot')
+        
+        from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
+        from dataclasses import asdict
+        
+        with UnwrangleFergusonScraper() as scraper:
+            product = scraper.scrape_model(request.model_number)
+            
+            if not product:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Product not found for model: {request.model_number}"
+                )
+            
+            # Convert to dict
+            product_dict = asdict(product)
+            
+            # Remove raw_data to reduce response size (keep in details if needed)
+            raw_data = product_dict.pop('raw_data', None)
+            
+            # Convert variants to dicts
+            if product_dict.get('variants'):
+                product_dict['variants'] = [
+                    {k: v for k, v in var.items() if v is not None}
+                    for var in product_dict['variants']
+                ]
+            
+            # Remove None values
+            product_dict = {k: v for k, v in product_dict.items() if v is not None}
+            
+            response_time = time.time() - start_time
+            
+            return {
+                "success": True,
+                "data": product_dict,
+                "metadata": {
+                    "source": "unwrangle_ferguson",
+                    "model_number": request.model_number,
+                    "response_time": f"{response_time:.2f}s",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            }
+    
+    except subprocess.TimeoutExpired:
+        raise HTTPException(
+            status_code=504,
+            detail="Request timeout - Ferguson lookup took too long"
+        )
+    except ImportError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Unwrangle scraper not available: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ferguson lookup failed: {str(e)}"
+        )
+
 # Error handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
