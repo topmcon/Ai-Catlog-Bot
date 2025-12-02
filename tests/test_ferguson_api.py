@@ -1,6 +1,6 @@
 """
-Tests for Ferguson API endpoints
-Tests the /lookup-ferguson and /search-ferguson backend endpoints
+Tests for Ferguson API endpoints.
+Tests the /lookup-ferguson and /search-ferguson backend endpoints.
 """
 
 import os

@@ -1,6 +1,6 @@
 """
-Tests for the Unwrangle Ferguson Scraper module
-Tests the scraper's data parsing and handling logic
+Tests for the Unwrangle Ferguson Scraper module.
+Tests the scraper's data parsing and handling logic.
 """
 
 import os

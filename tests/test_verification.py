@@ -1,6 +1,6 @@
 """
-Tests for the verification module
-Tests data validation and 2-source verification logic
+Tests for the verification module.
+Tests data validation and 2-source verification logic.
 """
 
 import os

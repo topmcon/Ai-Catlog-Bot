@@ -1,1 +1,1 @@
-# Test package for Ai-Catlog-Bot
+# Test package for AI-Catalog-Bot.
