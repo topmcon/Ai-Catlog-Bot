@@ -1539,9 +1539,6 @@ async def search_ferguson_products(
     start_time = time.time()
     
     try:
-        import sys
-        sys.path.insert(0, '/workspaces/Ai-Catlog-Bot')
-        
         from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
         
         # Get Unwrangle API key from environment
@@ -1612,9 +1609,6 @@ async def lookup_ferguson_product(
     start_time = time.time()
     
     try:
-        import sys
-        sys.path.insert(0, '/workspaces/Ai-Catlog-Bot')
-        
         from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
         from dataclasses import asdict
         

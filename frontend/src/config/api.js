@@ -22,6 +22,11 @@ export const API_ENDPOINTS = {
   AI_METRICS: `${API_URL}/ai-metrics`,
   AI_COMPARISON: `${API_URL}/ai-comparison`,
   AI_METRICS_RESET: `${API_URL}/ai-metrics/reset`,
+  ENRICH_PART: `${API_URL}/enrich-part`,
+  ENRICH_HOME_PRODUCT: `${API_URL}/enrich-home-product`,
+  LOOKUP_FERGUSON: `${API_URL}/lookup-ferguson`,
+  SEARCH_FERGUSON: `${API_URL}/search-ferguson`,
+  PORTAL_METRICS: `${API_URL}/portal-metrics`,
 };
 
 // Helper function for API requests with authentication
