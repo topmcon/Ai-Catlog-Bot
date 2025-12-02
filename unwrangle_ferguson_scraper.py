@@ -404,7 +404,8 @@ class UnwrangleFergusonScraper:
     
     def scrape_model(self, model_number: str) -> Optional[ProductData]:
         """
-        Scrape a product by model number (searches Ferguson first).
+        Scrape a product by model number using search API.
+        Uses search API directly since it returns comprehensive data.
         
         Args:
             model_number: Product model number (e.g., "K-2362-8", "KOHLER K-2362-8")
@@ -414,15 +415,52 @@ class UnwrangleFergusonScraper:
         """
         console.log(f"[bold blue]Looking up model:[/bold blue] {model_number}")
         
-        # Search for product URL
-        url = self._search_product_url(model_number)
+        # Use search API to find and get product data
+        search_results = self.search_products(model_number, max_results=1)
         
-        if not url:
-            console.log(f"[red]✗[/red] Could not find product URL for model: {model_number}")
+        if not search_results.get("success") or not search_results.get("results"):
+            console.log(f"[red]✗[/red] Could not find product for: {model_number}")
             return None
         
-        # Scrape the found URL
-        return self.scrape_url(url)
+        # Get first result from search
+        result = search_results["results"][0]
+        
+        # Convert search result to ProductData format
+        variants = []
+        for var in result.get("variants", []):
+            variants.append(ProductVariant(
+                variant_id=str(var.get("id")),
+                sku=var.get("model_no"),
+                name=var.get("name"),
+                price=var.get("price"),
+                availability=var.get("availability_status"),
+                stock_status="in_stock" if var.get("in_stock") else "out_of_stock",
+                attributes={
+                    "swatch_color": var.get("swatch_color"),
+                    "is_quick_ship": var.get("is_quick_ship"),
+                    "has_free_shipping": var.get("has_free_shipping"),
+                    "inventory_quantity": var.get("inventory_quantity")
+                },
+                image_url=var.get("image")
+            ))
+        
+        product = ProductData(
+            url=result.get("url", ""),
+            title=result.get("name"),
+            brand=result.get("brand"),
+            model_number=result.get("model_no"),
+            price=result.get("price"),
+            currency=result.get("currency", "USD"),
+            availability=result.get("availability_status", "in_stock" if result.get("has_in_stock_variants") else "out_of_stock"),
+            images=result.get("images", []),
+            variants=variants,
+            rating=result.get("rating"),
+            review_count=result.get("total_ratings"),
+            raw_data=result
+        )
+        
+        console.log(f"[green]✓[/green] Successfully loaded product: {product.title}")
+        return product
     
     def scrape_models(self, model_numbers: List[str]) -> List[ProductData]:
         """
