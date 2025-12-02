@@ -969,10 +969,16 @@ function FergusonApp() {
 
                 {/* Product Information Grid */}
                 <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 p-4 rounded-lg">
-                  {selectedProduct.category && (
+                  {selectedProduct.base_category && (
                     <div>
-                      <span className="font-medium text-gray-600">Category:</span>
-                      <span className="ml-2 text-gray-900">{selectedProduct.category}</span>
+                      <span className="font-medium text-gray-600">Base Category:</span>
+                      <span className="ml-2 text-gray-900">{selectedProduct.base_category}</span>
+                    </div>
+                  )}
+                  {selectedProduct.business_category && (
+                    <div>
+                      <span className="font-medium text-gray-600">Business Category:</span>
+                      <span className="ml-2 text-gray-900">{selectedProduct.business_category}</span>
                     </div>
                   )}
                   {selectedProduct.product_type && (
@@ -993,10 +999,10 @@ function FergusonApp() {
                       <span className="ml-2 text-gray-900">{selectedProduct.application}</span>
                     </div>
                   )}
-                  {selectedProduct.business_category && (
+                  {selectedProduct.configuration_type && (
                     <div>
-                      <span className="font-medium text-gray-600">Business Category:</span>
-                      <span className="ml-2 text-gray-900">{selectedProduct.business_category}</span>
+                      <span className="font-medium text-gray-600">Configuration:</span>
+                      <span className="ml-2 text-gray-900">{selectedProduct.configuration_type.replace(/_/g, ' ')}</span>
                     </div>
                   )}
                   {selectedProduct.upc && (
@@ -1017,7 +1023,7 @@ function FergusonApp() {
                       <span className="ml-2 text-gray-900">{selectedProduct.country_of_origin}</span>
                     </div>
                   )}
-                  {selectedProduct.total_inventory_quantity !== undefined && (
+                  {selectedProduct.total_inventory_quantity !== undefined && selectedProduct.total_inventory_quantity !== null && (
                     <div>
                       <span className="font-medium text-gray-600">Total Stock:</span>
                       <span className="ml-2 text-green-700 font-semibold">{selectedProduct.total_inventory_quantity} units</span>
@@ -1031,14 +1037,54 @@ function FergusonApp() {
                   )}
                   {selectedProduct.in_stock_variant_count !== undefined && (
                     <div>
-                      <span className="font-medium text-gray-600">In Stock:</span>
-                      <span className="ml-2 text-green-700 font-semibold">{selectedProduct.in_stock_variant_count} variants</span>
+                      <span className="font-medium text-gray-600">In Stock Variants:</span>
+                      <span className="ml-2 text-green-700 font-semibold">{selectedProduct.in_stock_variant_count} of {selectedProduct.variant_count}</span>
+                    </div>
+                  )}
+                  {selectedProduct.all_variants_in_stock !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">All In Stock:</span>
+                      <span className={`ml-2 font-semibold ${selectedProduct.all_variants_in_stock ? 'text-green-700' : 'text-orange-600'}`}>
+                        {selectedProduct.all_variants_in_stock ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  )}
+                  {selectedProduct.has_in_stock_variants !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Has Stock:</span>
+                      <span className={`ml-2 font-semibold ${selectedProduct.has_in_stock_variants ? 'text-green-700' : 'text-red-600'}`}>
+                        {selectedProduct.has_in_stock_variants ? 'Yes' : 'No'}
+                      </span>
                     </div>
                   )}
                   {selectedProduct.is_configurable !== undefined && (
                     <div>
                       <span className="font-medium text-gray-600">Configurable:</span>
                       <span className="ml-2 text-gray-900">{selectedProduct.is_configurable ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {selectedProduct.has_variant_groups !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Variant Groups:</span>
+                      <span className="ml-2 text-gray-900">{selectedProduct.has_variant_groups ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {selectedProduct.has_recommended_options !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Has Recommendations:</span>
+                      <span className="ml-2 text-gray-900">{selectedProduct.has_recommended_options ? 'Yes' : 'No'}</span>
+                    </div>
+                  )}
+                  {selectedProduct.total_reviews !== undefined && selectedProduct.total_reviews > 0 && (
+                    <div>
+                      <span className="font-medium text-gray-600">Total Reviews:</span>
+                      <span className="ml-2 text-gray-900">{selectedProduct.total_reviews}</span>
+                    </div>
+                  )}
+                  {selectedProduct.attribute_ids && selectedProduct.attribute_ids.length > 0 && (
+                    <div className="col-span-2">
+                      <span className="font-medium text-gray-600">Attribute IDs:</span>
+                      <span className="ml-2 text-gray-900 text-xs">{selectedProduct.attribute_ids.slice(0, 5).join(', ')}{selectedProduct.attribute_ids.length > 5 && ` +${selectedProduct.attribute_ids.length - 5} more`}</span>
                     </div>
                   )}
                 </div>
@@ -1191,6 +1237,32 @@ function FergusonApp() {
 
                 {/* Specifications */}
                 {renderSpecifications(selectedProduct.specifications)}
+
+                {/* Feature Groups */}
+                {selectedProduct.feature_groups && selectedProduct.feature_groups.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      ✨ Feature Groups ({selectedProduct.feature_groups.length})
+                    </h3>
+                    <div className="space-y-4">
+                      {selectedProduct.feature_groups.map((group, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                          <h4 className="font-semibold text-gray-900 mb-2">{group.name || `Group ${idx + 1}`}</h4>
+                          {group.features && (
+                            <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                              {group.features.map((feature, fIdx) => (
+                                <li key={fIdx} className="flex items-start">
+                                  <span className="text-blue-600 mr-2">▸</span>
+                                  <span className="text-gray-700">{typeof feature === 'string' ? feature : JSON.stringify(feature)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Variants */}
                 {renderVariants(selectedProduct.variants)}
