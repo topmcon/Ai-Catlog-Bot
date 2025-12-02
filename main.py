@@ -1510,6 +1510,10 @@ class FergusonLookupRequest(BaseModel):
     model_number: Optional[str] = Field(None, description="Product model number (e.g., 'K-2362-8')")
     url: Optional[str] = Field(None, description="Full Build.com/Ferguson product URL")
 
+class FergusonQuestionRequest(BaseModel):
+    question: str = Field(..., description="Question about the product")
+    product_data: Dict[str, Any] = Field(..., description="The Ferguson product data to reference")
+
 class FergusonSearchRequest(BaseModel):
     query: str = Field(..., description="Search query (e.g., 'pedestal bathroom sinks', 'K-2362-8')")
     page: int = Field(1, description="Page number (default: 1)", ge=1)
@@ -1680,6 +1684,178 @@ async def lookup_ferguson_product(
         raise HTTPException(
             status_code=500,
             detail=f"Ferguson lookup failed: {str(e)}"
+        )
+
+@app.post("/ask-question-ferguson")
+async def ask_question_ferguson(
+    request: FergusonQuestionRequest,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Ask a question about a Ferguson product using AI (OpenAI GPT-4o-mini and xAI Grok).
+    
+    The AI will:
+    1. First search the product data for the answer
+    2. If not found in product data, research and provide detailed information
+    
+    Requires:
+    - question: The question to ask about the product
+    - product_data: The complete Ferguson product data from lookup-ferguson
+    
+    Returns AI-generated answer with source information.
+    """
+    # Validate API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    if not request.question or not request.question.strip():
+        raise HTTPException(status_code=400, detail="Question is required")
+    
+    if not request.product_data:
+        raise HTTPException(status_code=400, detail="Product data is required")
+    
+    start_time = time.time()
+    
+    try:
+        # Prepare product context for AI
+        product_title = request.product_data.get('title', 'Unknown Product')
+        product_brand = request.product_data.get('brand', 'Unknown Brand')
+        product_model = request.product_data.get('model_number', 'Unknown Model')
+        
+        # Create a structured summary of product data
+        product_context = f"""Product Information:
+Title: {product_title}
+Brand: {product_brand}
+Model: {product_model}
+"""
+        
+        # Add description if available
+        if request.product_data.get('description'):
+            product_context += f"\nDescription: {request.product_data['description']}\n"
+        
+        # Add specifications
+        if request.product_data.get('specifications'):
+            product_context += "\nSpecifications:\n"
+            specs = request.product_data['specifications']
+            for key, value in specs.items():
+                product_context += f"  - {key}: {value}\n"
+        
+        # Add features
+        if request.product_data.get('features'):
+            product_context += "\nFeatures:\n"
+            for feature in request.product_data['features'][:10]:  # Limit to first 10 features
+                product_context += f"  - {feature}\n"
+        
+        # Add pricing info
+        if request.product_data.get('price'):
+            product_context += f"\nPrice: ${request.product_data['price']}\n"
+        
+        # Add variants summary
+        if request.product_data.get('variants'):
+            variants = request.product_data['variants']
+            product_context += f"\nAvailable Variants: {len(variants)} options\n"
+            if variants:
+                product_context += "Variant Options:\n"
+                for var in variants[:5]:  # First 5 variants
+                    var_name = var.get('name', 'Variant')
+                    var_price = var.get('price', 'N/A')
+                    product_context += f"  - {var_name}: ${var_price}\n"
+        
+        # Try OpenAI first
+        ai_response = None
+        ai_provider = None
+        error_messages = []
+        
+        for provider_name in ["openai", "xai"]:
+            provider = AI_PROVIDERS.get(provider_name)
+            if not provider or not provider["enabled"]:
+                error_messages.append(f"{provider_name}: Not configured")
+                continue
+            
+            try:
+                client = provider["client"]
+                model = provider["model"]
+                
+                prompt = f"""You are a helpful product expert assistant. A user has looked up a Ferguson/Build.com product and has a question about it.
+
+{product_context}
+
+User's Question: {request.question}
+
+Instructions:
+1. First, check if the answer can be found in the product information provided above
+2. If the answer IS in the product data, provide it clearly and reference where you found it
+3. If the answer is NOT in the product data, use your knowledge to research and provide helpful, accurate information about this type of product or the specific question asked
+4. Be specific, helpful, and concise
+5. If you're unsure, say so and provide the best information you can
+
+Provide your answer now:"""
+
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful product expert who answers questions about Ferguson/Build.com products. You provide accurate, detailed information and clearly indicate whether information comes from the product data or your general knowledge."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=1000
+                )
+                
+                ai_response = response.choices[0].message.content
+                ai_provider = provider["name"]
+                
+                # Track metrics
+                ai_metrics[provider_name]["total_requests"] += 1
+                ai_metrics[provider_name]["successful_requests"] += 1
+                ai_metrics[provider_name]["last_used"] = datetime.utcnow().isoformat()
+                
+                if hasattr(response, 'usage'):
+                    tokens = response.usage.total_tokens
+                    ai_metrics[provider_name]["total_tokens_used"] += tokens
+                    ai_metrics[provider_name]["avg_tokens"] = (
+                        ai_metrics[provider_name]["total_tokens_used"] / 
+                        ai_metrics[provider_name]["successful_requests"]
+                    )
+                
+                break  # Success, exit loop
+                
+            except Exception as e:
+                error_messages.append(f"{provider_name}: {str(e)}")
+                ai_metrics[provider_name]["total_requests"] += 1
+                ai_metrics[provider_name]["failed_requests"] += 1
+                continue
+        
+        if not ai_response:
+            raise HTTPException(
+                status_code=503,
+                detail=f"All AI providers failed. Errors: {'; '.join(error_messages)}"
+            )
+        
+        response_time = time.time() - start_time
+        
+        return {
+            "success": True,
+            "data": {
+                "question": request.question,
+                "answer": ai_response,
+                "product_title": product_title,
+                "product_brand": product_brand,
+                "product_model": product_model
+            },
+            "metadata": {
+                "ai_provider": ai_provider,
+                "response_time": f"{response_time:.2f}s",
+                "timestamp": datetime.utcnow().isoformat(),
+                "source": "ferguson_product_qa"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Question answering failed: {str(e)}"
         )
 
 # Error handlers

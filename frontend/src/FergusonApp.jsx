@@ -9,6 +9,12 @@ function FergusonApp() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
   const [modelNumber, setModelNumber] = useState('')
+  
+  // Question asking state
+  const [question, setQuestion] = useState('')
+  const [questionLoading, setQuestionLoading] = useState(false)
+  const [questionAnswer, setQuestionAnswer] = useState(null)
+  const [questionError, setQuestionError] = useState(null)
 
   const handleLookup = async (e) => {
     e.preventDefault()
@@ -53,6 +59,54 @@ function FergusonApp() {
     setProductData(null)
     setError(null)
     setModelNumber('')
+    setQuestion('')
+    setQuestionAnswer(null)
+    setQuestionError(null)
+  }
+
+  const handleAskQuestion = async (e) => {
+    e.preventDefault()
+    if (!productData) {
+      setQuestionError('Please lookup a product first before asking questions')
+      return
+    }
+    
+    setQuestionLoading(true)
+    setQuestionError(null)
+    setQuestionAnswer(null)
+
+    console.log('Asking question:', question)
+
+    try {
+      const response = await fetch(`${API_URL}/ask-question-ferguson`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-KEY': API_KEY,
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        },
+        body: JSON.stringify({
+          question: question.trim(),
+          product_data: productData
+        }),
+        cache: 'no-store'
+      })
+
+      const data = await response.json()
+      console.log('Question API response:', data)
+
+      if (data.success) {
+        setQuestionAnswer(data.data)
+      } else {
+        setQuestionError(data.error || 'Failed to answer question')
+      }
+    } catch (err) {
+      console.error('Question error:', err)
+      setQuestionError(`Error: ${err.message}. Make sure the backend is running.`)
+    } finally {
+      setQuestionLoading(false)
+    }
   }
 
   const renderVariants = (variants) => {
@@ -489,6 +543,112 @@ function FergusonApp() {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
                       </svg>
                     </a>
+                  )}
+                </div>
+
+                {/* AI Question Section - Only shows when product is loaded */}
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center mb-3">
+                    <svg className="w-6 h-6 text-blue-600 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h3 className="text-lg font-semibold text-gray-900">Ask a Question About This Product</h3>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Powered by OpenAI & Grok AI - Get detailed answers about features, specifications, compatibility, and more
+                  </p>
+                  
+                  <form onSubmit={handleAskQuestion} className="space-y-3">
+                    <div>
+                      <input
+                        type="text"
+                        value={question}
+                        onChange={(e) => setQuestion(e.target.value)}
+                        placeholder="e.g., What are the dimensions? Is this compatible with...? How do I install this?"
+                        className="input w-full"
+                        disabled={questionLoading}
+                        required
+                      />
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={questionLoading || !question.trim()}
+                        className="btn btn-primary flex-1"
+                      >
+                        {questionLoading ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            AI Thinking...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            Ask AI
+                          </>
+                        )}
+                      </button>
+                      
+                      {questionAnswer && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuestion('')
+                            setQuestionAnswer(null)
+                            setQuestionError(null)
+                          }}
+                          className="btn btn-secondary"
+                          disabled={questionLoading}
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                  </form>
+
+                  {/* Question Error */}
+                  {questionError && (
+                    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded">
+                      <div className="flex items-start">
+                        <svg className="w-5 h-5 text-red-600 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <p className="text-sm text-red-700">{questionError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Question Answer */}
+                  {questionAnswer && (
+                    <div className="mt-3 p-4 bg-white border border-green-200 rounded-lg shadow-sm">
+                      <div className="flex items-start mb-2">
+                        <svg className="w-5 h-5 text-green-600 mr-2 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <div className="flex-grow">
+                          <p className="font-semibold text-gray-900 mb-1">AI Answer:</p>
+                          <p className="text-sm text-gray-700 whitespace-pre-wrap">{questionAnswer.answer}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>
+                            <span className="font-medium">Question:</span> {questionAnswer.question}
+                          </span>
+                          {questionAnswer.metadata?.ai_provider && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                              {questionAnswer.metadata.ai_provider}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
