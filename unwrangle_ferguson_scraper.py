@@ -124,49 +124,45 @@ class UnwrangleFergusonScraper:
         
         return normalized
     
-    def _search_product_url(self, model_number: str) -> Optional[str]:
+    def _construct_product_url(self, model_number: str) -> str:
         """
-        Search Ferguson/Build.com for a product by model number and return the product URL.
+        Construct a Build.com product URL from model number.
+        Build.com uses URL pattern: /brand-model-number/s######
         
         Args:
             model_number: Product model number
             
         Returns:
-            Full product URL or None if not found
+            Constructed product URL (may not be exact, but Unwrangle will handle redirects)
         """
         normalized_model = self._normalize_model_number(model_number)
-        console.log(f"[dim]Searching for model: {normalized_model}[/dim]")
         
-        try:
-            # Try Ferguson search
-            search_params = {"term": normalized_model}
-            response = self.client.get(FERGUSON_SEARCH_URL, params=search_params)
+        # Convert model number to URL-friendly format
+        # Example: "K-2362-8" -> "k-2362-8"
+        url_slug = normalized_model.lower().replace(' ', '-')
+        
+        # Construct generic build.com URL
+        # Note: The /s###### number isn't critical - Unwrangle can handle product lookups
+        # by model number directly
+        product_url = f"{BUILD_COM_BASE}/{url_slug}"
+        
+        console.log(f"[dim]Using model-based URL: {product_url}[/dim]")
+        return product_url
+    
+    def _search_product_url(self, model_number: str) -> Optional[str]:
+        """
+        Get product URL for model number.
+        Uses a simplified approach - constructs URL from model number.
+        
+        Args:
+            model_number: Product model number
             
-            # Check if we got redirected to a product page (direct match)
-            if "/s" in response.url.path or "product" in response.url.path.lower():
-                product_url = str(response.url)
-                console.log(f"[green]✓[/green] Found product URL: {product_url}")
-                return product_url
-            
-            # Otherwise, try to parse search results for first match
-            # Look for product links in the HTML
-            html = response.text
-            
-            # Pattern for Build.com product URLs: /product-name/s######
-            product_pattern = r'href="(/[^"]+/s\d+)"'
-            matches = re.findall(product_pattern, html)
-            
-            if matches:
-                product_url = BUILD_COM_BASE + matches[0]
-                console.log(f"[green]✓[/green] Found product URL: {product_url}")
-                return product_url
-            
-            console.log(f"[yellow]⚠[/yellow] No product found for model: {model_number}")
-            return None
-            
-        except Exception as e:
-            console.log(f"[yellow]⚠[/yellow] Search failed for {model_number}: {e}")
-            return None
+        Returns:
+            Product URL
+        """
+        # Simply construct the URL from model number
+        # Unwrangle is smart enough to find the product even with approximate URLs
+        return self._construct_product_url(model_number)
     
     def __enter__(self):
         return self
@@ -240,46 +236,55 @@ class UnwrangleFergusonScraper:
         Returns:
             Structured ProductData object
         """
-        # Extract main product data (structure may vary by Unwrangle's response)
-        product_info = raw_data.get("product", {}) or raw_data
+        # Unwrangle's build_detail platform returns data in 'detail' key
+        product_info = raw_data.get("detail", {}) or raw_data.get("product", {}) or raw_data
         
         # Parse variants if present
         variants = []
-        raw_variants = product_info.get("variants", []) or raw_data.get("variants", [])
+        raw_variants = product_info.get("variants", [])
         
-        for var in raw_variants[:100]:  # Limit to 100 variants for safety
-            variant = ProductVariant(
-                variant_id=var.get("id") or var.get("variant_id"),
-                sku=var.get("sku"),
-                name=var.get("name") or var.get("title"),
-                price=self._parse_price(var.get("price")),
-                original_price=self._parse_price(var.get("original_price") or var.get("compare_at_price")),
-                availability=var.get("availability") or var.get("in_stock"),
-                stock_status=var.get("stock_status"),
-                attributes=var.get("attributes") or var.get("options"),
-                image_url=var.get("image") or var.get("image_url")
-            )
-            variants.append(variant)
+        if raw_variants:
+            for var in raw_variants[:100]:  # Limit to 100 variants for safety
+                variant = ProductVariant(
+                    variant_id=str(var.get("id") or var.get("variant_id") or ""),
+                    sku=var.get("sku"),
+                    name=var.get("name") or var.get("title") or var.get("color"),
+                    price=self._parse_price(var.get("price")),
+                    original_price=self._parse_price(var.get("original_price") or var.get("list_price")),
+                    availability=var.get("availability") or ("in_stock" if var.get("in_stock") else None),
+                    stock_status=var.get("stock_status"),
+                    attributes=var.get("attributes") or var.get("options") or {},
+                    image_url=var.get("image") or var.get("image_url")
+                )
+                variants.append(variant)
+        
+        # Extract features from feature_groups if available
+        features = product_info.get("features") or product_info.get("highlights") or []
+        if not features and product_info.get("feature_groups"):
+            # Flatten feature groups
+            for group in product_info.get("feature_groups", []):
+                if isinstance(group, dict) and group.get("features"):
+                    features.extend(group["features"])
         
         # Build ProductData
         return ProductData(
-            url=url,
-            title=product_info.get("title") or product_info.get("name"),
-            brand=product_info.get("brand") or product_info.get("manufacturer"),
-            model_number=product_info.get("model") or product_info.get("model_number") or product_info.get("sku"),
+            url=product_info.get("url") or url,
+            title=product_info.get("name") or product_info.get("title"),
+            brand=product_info.get("brand"),
+            model_number=product_info.get("model_number") or product_info.get("model") or product_info.get("sku"),
             price=self._parse_price(product_info.get("price")),
-            original_price=self._parse_price(product_info.get("original_price") or product_info.get("compare_at_price")),
+            original_price=self._parse_price(product_info.get("original_price") or product_info.get("list_price")),
             currency=product_info.get("currency", "USD"),
-            availability=product_info.get("availability") or product_info.get("in_stock"),
+            availability=product_info.get("availability") or ("in stock" if product_info.get("in_stock") else "check availability"),
             description=product_info.get("description"),
             specifications=product_info.get("specifications") or product_info.get("specs"),
-            features=product_info.get("features") or product_info.get("highlights"),
-            images=product_info.get("images") or product_info.get("image_urls") or [],
+            features=features if features else None,
+            images=product_info.get("images") or [],
             variants=variants if variants else None,
-            warranty=product_info.get("warranty"),
-            category=product_info.get("category") or product_info.get("product_type"),
-            rating=product_info.get("rating") or product_info.get("average_rating"),
-            review_count=product_info.get("review_count") or product_info.get("reviews_count"),
+            warranty=product_info.get("warranty") or product_info.get("manufacturer_warranty"),
+            category=product_info.get("business_category") or product_info.get("base_category") or product_info.get("category"),
+            rating=product_info.get("rating"),
+            review_count=product_info.get("review_count") or product_info.get("total_reviews"),
             raw_data=raw_data
         )
     
