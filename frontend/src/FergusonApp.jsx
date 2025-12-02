@@ -158,7 +158,36 @@ function FergusonApp() {
     )
   }
 
-  const renderFeatures = (features) => {
+  const renderFeatures = (features, featureGroups) => {
+    // If we have feature_groups, use those for better organization
+    if (featureGroups && featureGroups.length > 0) {
+      return (
+        <div className="mt-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">Features & Specifications</h3>
+          <div className="space-y-4">
+            {featureGroups.map((group, groupIdx) => (
+              <div key={groupIdx} className="bg-gray-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-800 mb-2">{group.name}</h4>
+                <ul className="space-y-1">
+                  {group.features && group.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start text-sm">
+                      <svg className="w-4 h-4 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-gray-700">
+                        {typeof feature === 'string' ? feature : `${feature.name}: ${feature.value}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    // Fallback to simple features list
     if (!features || features.length === 0) return null
 
     return (
@@ -364,38 +393,191 @@ function FergusonApp() {
                   </div>
                 )}
 
-                {/* Category & Ratings */}
-                <div className="flex gap-4 text-sm">
+                {/* Product Information Grid */}
+                <div className="grid grid-cols-2 gap-3 text-sm bg-gray-50 p-4 rounded-lg">
                   {productData.category && (
                     <div>
                       <span className="font-medium text-gray-600">Category:</span>
                       <span className="ml-2 text-gray-900">{productData.category}</span>
                     </div>
                   )}
-                  {productData.rating && (
+                  {productData.product_type && (
                     <div>
-                      <span className="font-medium text-gray-600">Rating:</span>
-                      <span className="ml-2 text-yellow-600">★ {productData.rating}</span>
-                      {productData.review_count && (
-                        <span className="ml-1 text-gray-500">({productData.review_count} reviews)</span>
-                      )}
+                      <span className="font-medium text-gray-600">Product Type:</span>
+                      <span className="ml-2 text-gray-900">{productData.product_type}</span>
+                    </div>
+                  )}
+                  {productData.upc && (
+                    <div>
+                      <span className="font-medium text-gray-600">UPC:</span>
+                      <span className="ml-2 text-gray-900">{productData.upc}</span>
+                    </div>
+                  )}
+                  {productData.country_of_origin && (
+                    <div>
+                      <span className="font-medium text-gray-600">Origin:</span>
+                      <span className="ml-2 text-gray-900">{productData.country_of_origin}</span>
+                    </div>
+                  )}
+                  {productData.shipping_fee !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Shipping Fee:</span>
+                      <span className="ml-2 text-gray-900">${productData.shipping_fee}</span>
+                    </div>
+                  )}
+                  {productData.total_inventory_quantity !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Total Stock:</span>
+                      <span className="ml-2 text-green-700 font-semibold">{productData.total_inventory_quantity} units</span>
                     </div>
                   )}
                 </div>
 
+                {/* Ratings & Reviews */}
+                {(productData.rating || productData.review_count || productData.questions_count) && (
+                  <div className="flex gap-6 text-sm">
+                    {productData.rating && (
+                      <div>
+                        <span className="font-medium text-gray-600">Rating:</span>
+                        <span className="ml-2 text-yellow-600">★ {productData.rating}</span>
+                        {productData.review_count && (
+                          <span className="ml-1 text-gray-500">({productData.review_count} reviews)</span>
+                        )}
+                      </div>
+                    )}
+                    {productData.questions_count > 0 && (
+                      <div>
+                        <span className="font-medium text-gray-600">Q&A:</span>
+                        <span className="ml-2 text-gray-900">{productData.questions_count} questions</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Collection Info */}
+                {productData.collection && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <h3 className="text-sm font-semibold text-purple-900 mb-1">Collection</h3>
+                    <p className="text-sm text-purple-800 font-medium">{productData.collection.name}</p>
+                    {productData.collection.description && (
+                      <p className="text-xs text-purple-700 mt-1">{productData.collection.description}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Certifications */}
+                {productData.certifications && productData.certifications.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Certifications</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {productData.certifications.map((cert, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+                          {cert}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Warranty */}
-                {productData.warranty && (
+                {(productData.warranty || productData.manufacturer_warranty) && (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-blue-900 mb-1">Warranty Information</h3>
-                    <p className="text-sm text-blue-800">{productData.warranty}</p>
+                    <h3 className="text-sm font-semibold text-blue-900 mb-2">Warranty Information</h3>
+                    {productData.warranty && (
+                      <p className="text-sm text-blue-800 mb-1">{productData.warranty}</p>
+                    )}
+                    {productData.manufacturer_warranty && (
+                      <p className="text-sm text-blue-800">Manufacturer: {productData.manufacturer_warranty}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Dimensions */}
+                {productData.dimensions && Object.keys(productData.dimensions).length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Dimensions</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 grid grid-cols-3 gap-3 text-sm">
+                      {productData.dimensions.height && (
+                        <div>
+                          <span className="font-medium text-gray-600">Height:</span>
+                          <span className="ml-2 text-gray-900">{productData.dimensions.height}</span>
+                        </div>
+                      )}
+                      {productData.dimensions.width && (
+                        <div>
+                          <span className="font-medium text-gray-600">Width:</span>
+                          <span className="ml-2 text-gray-900">{productData.dimensions.width}</span>
+                        </div>
+                      )}
+                      {productData.dimensions.length && (
+                        <div>
+                          <span className="font-medium text-gray-600">Length:</span>
+                          <span className="ml-2 text-gray-900">{productData.dimensions.length}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* Images */}
                 {renderImages(productData.images)}
 
+                {/* Videos */}
+                {productData.videos && productData.videos.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      Product Videos ({productData.videos.length})
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {productData.videos.map((video, idx) => (
+                        <div key={idx} className="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+                          <video controls className="w-full h-full">
+                            <source src={video} />
+                            Your browser does not support the video tag.
+                          </video>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Resources (Manuals, Spec Sheets, Guides) */}
+                {productData.resources && productData.resources.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      📄 Resources & Downloads ({productData.resources.length})
+                    </h3>
+                    <div className="space-y-2">
+                      {productData.resources.map((resource, idx) => (
+                        <a
+                          key={idx}
+                          href={resource.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
+                        >
+                          <div className="flex items-center">
+                            <svg className="w-5 h-5 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                            </svg>
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{resource.name}</p>
+                              {resource.id && (
+                                <p className="text-xs text-gray-500">ID: {resource.id}</p>
+                              )}
+                            </div>
+                          </div>
+                          <svg className="w-5 h-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Features */}
-                {renderFeatures(productData.features)}
+                {renderFeatures(productData.features, productData.feature_groups)}
 
                 {/* Specifications */}
                 {renderSpecifications(productData.specifications)}

@@ -57,24 +57,63 @@ class ProductVariant:
 
 @dataclass
 class ProductData:
-    """Structured product data from Unwrangle API."""
+    """Structured product data from Unwrangle API - comprehensive fields."""
     url: str
     title: Optional[str] = None
     brand: Optional[str] = None
+    brand_url: Optional[str] = None
+    brand_logo: Optional[Dict[str, str]] = None
     model_number: Optional[str] = None
     price: Optional[float] = None
     original_price: Optional[float] = None
     currency: Optional[str] = None
+    price_range: Optional[Dict[str, Any]] = None
+    shipping_fee: Optional[float] = None
     availability: Optional[str] = None
     description: Optional[str] = None
     specifications: Optional[Dict[str, Any]] = None
-    features: Optional[List[str]] = None
+    features: Optional[List[Any]] = None
+    feature_groups: Optional[List[Dict[str, Any]]] = None
     images: Optional[List[str]] = None
+    videos: Optional[List[str]] = None
     variants: Optional[List[ProductVariant]] = None
     warranty: Optional[str] = None
+    manufacturer_warranty: Optional[str] = None
     category: Optional[str] = None
+    categories: Optional[List[Dict[str, str]]] = None
+    base_category: Optional[str] = None
+    business_category: Optional[str] = None
+    related_categories: Optional[List[Dict[str, Any]]] = None
     rating: Optional[float] = None
     review_count: Optional[int] = None
+    questions_count: Optional[int] = None
+    resources: Optional[List[Dict[str, str]]] = None
+    dimensions: Optional[Dict[str, str]] = None
+    upc: Optional[str] = None
+    barcode: Optional[str] = None
+    certifications: Optional[List[str]] = None
+    country_of_origin: Optional[str] = None
+    product_type: Optional[str] = None
+    application: Optional[str] = None
+    base_type: Optional[str] = None
+    collection: Optional[Dict[str, str]] = None
+    is_discontinued: Optional[bool] = None
+    is_configurable: Optional[bool] = None
+    has_free_installation: Optional[bool] = None
+    has_recommended_options: Optional[bool] = None
+    has_accessories: Optional[bool] = None
+    has_variant_groups: Optional[bool] = None
+    has_replacement_parts: Optional[bool] = None
+    replacement_parts_url: Optional[str] = None
+    is_by_appointment_only: Optional[bool] = None
+    configuration_type: Optional[str] = None
+    recommended_options: Optional[List[Dict[str, Any]]] = None
+    attribute_ids: Optional[List[Dict[str, Any]]] = None
+    has_in_stock_variants: Optional[bool] = None
+    all_variants_in_stock: Optional[bool] = None
+    total_inventory_quantity: Optional[int] = None
+    variant_count: Optional[int] = None
+    in_stock_variant_count: Optional[int] = None
     raw_data: Optional[Dict[str, Any]] = None
 
 
@@ -425,37 +464,101 @@ class UnwrangleFergusonScraper:
         # Get first result from search
         result = search_results["results"][0]
         
-        # Convert search result to ProductData format
+        # Convert search result to ProductData format with ALL available fields
         variants = []
         for var in result.get("variants", []):
+            # Extract all variant attributes
+            var_attrs = {
+                "swatch_color": var.get("swatch_color"),
+                "swatch_gradient": var.get("swatch_gradient"),
+                "is_quick_ship": var.get("is_quick_ship"),
+                "has_free_shipping": var.get("has_free_shipping"),
+                "inventory_quantity": var.get("inventory_quantity"),
+                "is_made_to_order": var.get("is_made_to_order"),
+                "shipping_lead_time": var.get("shipping_lead_time"),
+                "estimated_delivery": var.get("estimated_delivery"),
+                "shipping_message": var.get("shipping_message"),
+                "shipping_info": var.get("shipping_info"),
+                "color": var.get("color"),
+                "title": var.get("title"),
+            }
+            # Remove None values
+            var_attrs = {k: v for k, v in var_attrs.items() if v is not None}
+            
             variants.append(ProductVariant(
                 variant_id=str(var.get("id")),
-                sku=var.get("model_no"),
+                sku=var.get("model_number") or var.get("model_no"),
                 name=var.get("name"),
                 price=var.get("price"),
                 availability=var.get("availability_status"),
                 stock_status="in_stock" if var.get("in_stock") else "out_of_stock",
-                attributes={
-                    "swatch_color": var.get("swatch_color"),
-                    "is_quick_ship": var.get("is_quick_ship"),
-                    "has_free_shipping": var.get("has_free_shipping"),
-                    "inventory_quantity": var.get("inventory_quantity")
-                },
-                image_url=var.get("image")
+                attributes=var_attrs,
+                image_url=var.get("image") or var.get("images", [None])[0] if var.get("images") else None
             ))
         
+        # Extract features - can be array of strings or objects
+        features = result.get("features", [])
+        if features and isinstance(features[0], dict):
+            # Convert feature objects to readable format
+            features = [f"{f.get('name', 'Feature')}: {f.get('value', '')}" for f in features if isinstance(f, dict)]
+        
+        # Build comprehensive ProductData with all fields
         product = ProductData(
             url=result.get("url", ""),
             title=result.get("name"),
             brand=result.get("brand"),
-            model_number=result.get("model_no"),
+            brand_url=result.get("brand_url"),
+            brand_logo=result.get("brand_logo"),
+            model_number=result.get("model_number") or result.get("model_no"),
             price=result.get("price"),
             currency=result.get("currency", "USD"),
+            price_range=result.get("price_range"),
+            shipping_fee=result.get("shipping_fee"),
             availability=result.get("availability_status", "in_stock" if result.get("has_in_stock_variants") else "out_of_stock"),
+            description=result.get("description"),
+            specifications=result.get("specifications"),
+            features=features,
+            feature_groups=result.get("feature_groups"),
             images=result.get("images", []),
+            videos=result.get("videos", []),
             variants=variants,
+            warranty=result.get("warranty"),
+            manufacturer_warranty=result.get("manufacturer_warranty"),
+            category=result.get("base_category"),
+            categories=result.get("categories"),
+            base_category=result.get("base_category"),
+            business_category=result.get("business_category"),
+            related_categories=result.get("related_categories"),
             rating=result.get("rating"),
-            review_count=result.get("total_ratings"),
+            review_count=result.get("total_ratings") or result.get("review_count"),
+            questions_count=result.get("questions_count"),
+            resources=result.get("resources"),
+            dimensions=result.get("dimensions"),
+            upc=result.get("upc"),
+            barcode=result.get("barcode"),
+            certifications=result.get("certifications"),
+            country_of_origin=result.get("country_of_origin"),
+            product_type=result.get("product_type"),
+            application=result.get("application"),
+            base_type=result.get("base_type"),
+            collection=result.get("collection"),
+            is_discontinued=result.get("is_discontinued"),
+            is_configurable=result.get("is_configurable"),
+            has_free_installation=result.get("has_free_installation"),
+            has_recommended_options=result.get("has_recommended_options"),
+            has_accessories=result.get("has_accessories"),
+            has_variant_groups=result.get("has_variant_groups"),
+            has_replacement_parts=result.get("has_replacement_parts"),
+            replacement_parts_url=result.get("replacement_parts_url"),
+            is_by_appointment_only=result.get("is_by_appointment_only") or result.get("is_appointment_only_brand"),
+            configuration_type=result.get("configuration_type"),
+            recommended_options=result.get("recommended_options"),
+            attribute_ids=result.get("attribute_ids"),
+            has_in_stock_variants=result.get("has_in_stock_variants"),
+            all_variants_in_stock=result.get("all_variants_in_stock"),
+            total_inventory_quantity=result.get("total_inventory_quantity"),
+            variant_count=result.get("variant_count"),
+            in_stock_variant_count=result.get("in_stock_variant_count"),
             raw_data=result
         )
         
