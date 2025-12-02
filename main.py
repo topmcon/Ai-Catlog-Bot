@@ -1510,16 +1510,93 @@ class FergusonLookupRequest(BaseModel):
     model_number: Optional[str] = Field(None, description="Product model number (e.g., 'K-2362-8')")
     url: Optional[str] = Field(None, description="Full Build.com/Ferguson product URL")
 
+class FergusonSearchRequest(BaseModel):
+    query: str = Field(..., description="Search query (e.g., 'pedestal bathroom sinks', 'K-2362-8')")
+    page: int = Field(1, description="Page number (default: 1)", ge=1)
+    max_results: int = Field(48, description="Maximum results per page (default: 48)", ge=1, le=48)
+
+@app.post("/search-ferguson")
+async def search_ferguson_products(
+    request: FergusonSearchRequest,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Search for products on Ferguson/Build.com using Unwrangle API.
+    Returns up to 48 product summaries per page with basic info (name, price, URL, etc.)
+    without detailed scraping.
+    
+    Use this endpoint to:
+    - Search by keyword (e.g., "pedestal bathroom sinks")
+    - Search by model number (e.g., "K-2362-8")
+    - Browse categories
+    
+    For detailed product information, use /lookup-ferguson with a specific URL or model.
+    """
+    # Validate API key
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    start_time = time.time()
+    
+    try:
+        import sys
+        sys.path.insert(0, '/workspaces/Ai-Catlog-Bot')
+        
+        from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
+        
+        # Get Unwrangle API key from environment
+        unwrangle_api_key = os.getenv("UNWRANGLE_API_KEY")
+        if not unwrangle_api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="Unwrangle API key not configured on server"
+            )
+        
+        with UnwrangleFergusonScraper(api_key=unwrangle_api_key) as scraper:
+            search_results = scraper.search_products(
+                query=request.query,
+                page=request.page,
+                max_results=request.max_results
+            )
+            
+            response_time = time.time() - start_time
+            
+            return {
+                **search_results,
+                "metadata": {
+                    "source": "unwrangle_ferguson_search",
+                    "response_time": f"{response_time:.2f}s",
+                    "timestamp": datetime.utcnow().isoformat()
+                }
+            }
+    
+    except ImportError as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Unwrangle scraper not available: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Ferguson search failed: {str(e)}"
+        )
+
 @app.post("/lookup-ferguson")
 async def lookup_ferguson_product(
     request: FergusonLookupRequest,
     x_api_key: Optional[str] = Header(None)
 ):
     """
-    Lookup product data from Ferguson/Build.com using Unwrangle API.
+    Lookup detailed product data from Ferguson/Build.com using Unwrangle API.
     Accepts either:
-    - model_number: Product model (e.g., "K-2362-8") - will attempt to find URL
-    - url: Direct Build.com/Ferguson product URL (recommended for reliability)
+    - model_number: Product model (e.g., "K-2362-8") - will search and scrape first result
+    - url: Direct Build.com/Ferguson product URL (recommended for accuracy)
+    
+    Returns complete product details including:
+    - Title, brand, model number, pricing
+    - Full specifications and features
+    - All variants with individual pricing
+    - Images, ratings, reviews
     """
     # Validate API key
     if x_api_key != API_KEY:

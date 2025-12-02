@@ -151,18 +151,54 @@ class UnwrangleFergusonScraper:
     
     def _search_product_url(self, model_number: str) -> Optional[str]:
         """
-        Get product URL for model number.
-        Uses a simplified approach - constructs URL from model number.
+        Search for product URL using Unwrangle's build_search API.
         
         Args:
             model_number: Product model number
             
         Returns:
-            Product URL
+            Product URL or None if not found
         """
-        # Simply construct the URL from model number
-        # Unwrangle is smart enough to find the product even with approximate URLs
-        return self._construct_product_url(model_number)
+        normalized_model = self._normalize_model_number(model_number)
+        
+        # Use Unwrangle's build_search API to find the product
+        params = {
+            "platform": "build_search",
+            "search": normalized_model,
+            "api_key": self.api_key
+        }
+        
+        try:
+            console.log(f"[dim]Searching for: {normalized_model}[/dim]")
+            response = self.client.get(UNWRANGLE_API_URL, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            # Get first result from search
+            results = data.get("results", [])
+            
+            if not results:
+                console.log(f"[yellow]⚠[/yellow] No search results for: {model_number}")
+                return None
+            
+            # Return URL of first matching product
+            first_result = results[0]
+            product_url = first_result.get("url")
+            
+            if product_url:
+                console.log(f"[green]✓[/green] Found product: {first_result.get('name', 'Unknown')}")
+                console.log(f"[dim]  URL: {product_url}[/dim]")
+                return product_url
+            
+            console.log(f"[yellow]⚠[/yellow] No URL in search result")
+            return None
+            
+        except Exception as e:
+            console.log(f"[yellow]⚠[/yellow] Search failed: {e}")
+            console.log(f"[dim]Falling back to constructed URL[/dim]")
+            # Fall back to constructing URL from model number
+            return self._construct_product_url(model_number)
     
     def __enter__(self):
         return self
@@ -426,6 +462,66 @@ class UnwrangleFergusonScraper:
         console.log(f"[green]✓[/green] Successfully scraped {successful}/{len(model_numbers)} models")
         
         return products
+    
+    def search_products(self, query: str, page: int = 1, max_results: int = 48) -> Dict[str, Any]:
+        """
+        Search for products using Unwrangle's build_search API.
+        Returns search results without detailed scraping.
+        
+        Args:
+            query: Search query (e.g., "pedestal bathroom sinks", "K-2362-8")
+            page: Page number (default: 1)
+            max_results: Maximum results to return (default: 48, API max per page)
+            
+        Returns:
+            Dict containing:
+                - results: List of product summaries with basic info
+                - total_results: Total matching products
+                - page: Current page
+                - no_of_pages: Total pages available
+        """
+        console.log(f"[bold blue]Searching:[/bold blue] {query} (page {page})")
+        
+        params = {
+            "platform": "build_search",
+            "search": query,
+            "page": page,
+            "api_key": self.api_key
+        }
+        
+        try:
+            response = self.client.get(UNWRANGLE_API_URL, params=params)
+            response.raise_for_status()
+            
+            data = response.json()
+            
+            if not data.get("success"):
+                raise Exception(f"Search failed: {data.get('error', 'Unknown error')}")
+            
+            results = data.get("results", [])
+            total_results = data.get("total_results", 0)
+            no_of_pages = data.get("no_of_pages", 1)
+            
+            console.log(f"[green]✓[/green] Found {len(results)} products (total: {total_results})")
+            
+            # Limit results if requested
+            if len(results) > max_results:
+                results = results[:max_results]
+            
+            return {
+                "success": True,
+                "query": query,
+                "page": page,
+                "results": results,
+                "result_count": len(results),
+                "total_results": total_results,
+                "no_of_pages": no_of_pages,
+                "meta_data": data.get("meta_data", {})
+            }
+            
+        except Exception as e:
+            console.log(f"[red]✗[/red] Search failed: {e}")
+            raise
 
 
 def save_json(products: List[ProductData], output_file: str = "products.json"):
