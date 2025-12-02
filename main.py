@@ -1505,19 +1505,18 @@ async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):
         "timestamp": datetime.utcnow().isoformat()
     }
 
-# Ferguson Product Lookup Endpoint (Unwrangle Integration)
-class FergusonLookupRequest(BaseModel):
-    model_number: Optional[str] = Field(None, description="Product model number (e.g., 'K-2362-8')")
-    url: Optional[str] = Field(None, description="Full Build.com/Ferguson product URL")
-
-class FergusonQuestionRequest(BaseModel):
-    question: str = Field(..., description="Question about the product")
-    product_data: Dict[str, Any] = Field(..., description="The Ferguson product data to reference")
+# ============================================================================
+# FERGUSON HOME APIs (Unwrangle Integration)
+# ============================================================================
 
 class FergusonSearchRequest(BaseModel):
-    query: str = Field(..., description="Search query (e.g., 'pedestal bathroom sinks', 'K-2362-8')")
+    """Request model for Ferguson Home product search"""
+    search: str = Field(..., description="Search query (e.g., 'Pedestal Bathroom Sinks', 'Kohler faucet')")
     page: int = Field(1, description="Page number (default: 1)", ge=1)
-    max_results: int = Field(48, description="Maximum results per page (default: 48)", ge=1, le=48)
+
+class FergusonProductRequest(BaseModel):
+    """Request model for Ferguson Home product detail lookup"""
+    url: str = Field(..., description="Full Ferguson Home product URL (must be URL-encoded)")
 
 @app.post("/search-ferguson")
 async def search_ferguson_products(
@@ -1525,16 +1524,25 @@ async def search_ferguson_products(
     x_api_key: Optional[str] = Header(None)
 ):
     """
-    Search for products on Ferguson/Build.com using Unwrangle API.
-    Returns up to 48 product summaries per page with basic info (name, price, URL, etc.)
-    without detailed scraping.
+    Search Ferguson Home products using Unwrangle API.
     
-    Use this endpoint to:
-    - Search by keyword (e.g., "pedestal bathroom sinks")
-    - Search by model number (e.g., "K-2362-8")
-    - Browse categories
+    Returns up to 24 products per page with complete merchandising details including:
+    - Product name, brand, model number
+    - Pricing (min/max/current) and currency
+    - Variant information (colors, sizes, availability)
+    - Stock status and inventory quantities
+    - Product images and thumbnails
+    - Ratings and review counts
+    - Features and specifications
+    - Collection information
+    - Shipping details
     
-    For detailed product information, use /lookup-ferguson with a specific URL or model.
+    Cost: 10 credits per search request
+    
+    Example searches:
+    - "Pedestal Bathroom Sinks"
+    - "Kohler Kitchen Faucet"
+    - "K-2362-8"
     """
     # Validate API key
     if x_api_key != API_KEY:
@@ -1543,41 +1551,61 @@ async def search_ferguson_products(
     start_time = time.time()
     
     try:
-        import sys
-        sys.path.insert(0, '/workspaces/Ai-Catlog-Bot')
-        
-        from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
-        
-        # Get Unwrangle API key from environment
+        # Get Unwrangle API key
         unwrangle_api_key = os.getenv("UNWRANGLE_API_KEY")
         if not unwrangle_api_key:
             raise HTTPException(
                 status_code=500,
-                detail="Unwrangle API key not configured on server"
+                detail="Unwrangle API key not configured"
             )
         
-        with UnwrangleFergusonScraper(api_key=unwrangle_api_key) as scraper:
-            search_results = scraper.search_products(
-                query=request.query,
-                page=request.page,
-                max_results=request.max_results
+        # Build API request URL
+        import urllib.parse
+        base_url = "https://data.unwrangle.com/api/getter/"
+        params = {
+            "platform": "fergusonhome_search",
+            "search": request.search,
+            "page": request.page,
+            "api_key": unwrangle_api_key
+        }
+        
+        # Make request to Unwrangle API
+        import requests
+        response = requests.get(base_url, params=params, timeout=30)
+        response.raise_for_status()
+        
+        data = response.json()
+        
+        if not data.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail="Ferguson search returned unsuccessful response"
             )
-            
-            response_time = time.time() - start_time
-            
-            return {
-                **search_results,
-                "metadata": {
-                    "source": "unwrangle_ferguson_search",
-                    "response_time": f"{response_time:.2f}s",
-                    "timestamp": datetime.utcnow().isoformat()
-                }
+        
+        response_time = time.time() - start_time
+        
+        return {
+            "success": True,
+            "platform": "fergusonhome_search",
+            "search_query": request.search,
+            "page": request.page,
+            "total_results": data.get("total_results", 0),
+            "total_pages": data.get("no_of_pages", 0),
+            "result_count": data.get("result_count", 0),
+            "products": data.get("results", []),
+            "meta_data": data.get("meta_data", {}),
+            "credits_used": data.get("credits_used", 10),
+            "metadata": {
+                "response_time": f"{response_time:.2f}s",
+                "timestamp": datetime.utcnow().isoformat(),
+                "api_version": "fergusonhome_search_v1"
             }
+        }
     
-    except ImportError as e:
+    except requests.RequestException as e:
         raise HTTPException(
             status_code=503,
-            detail=f"Unwrangle scraper not available: {str(e)}"
+            detail=f"Unwrangle API request failed: {str(e)}"
         )
     except Exception as e:
         raise HTTPException(
@@ -1585,278 +1613,108 @@ async def search_ferguson_products(
             detail=f"Ferguson search failed: {str(e)}"
         )
 
-@app.post("/lookup-ferguson")
-async def lookup_ferguson_product(
-    request: FergusonLookupRequest,
+@app.post("/product-detail-ferguson")
+async def get_ferguson_product_detail(
+    request: FergusonProductRequest,
     x_api_key: Optional[str] = Header(None)
 ):
     """
-    Lookup detailed product data from Ferguson/Build.com using Unwrangle API.
-    Accepts either:
-    - model_number: Product model (e.g., "K-2362-8") - will search and scrape first result
-    - url: Direct Build.com/Ferguson product URL (recommended for accuracy)
+    Get complete Ferguson Home product detail data using Unwrangle API.
     
-    Returns complete product details including:
-    - Title, brand, model number, pricing
-    - Full specifications and features
-    - All variants with individual pricing
-    - Images, ratings, reviews
+    Returns comprehensive product information including:
+    - Basic info: ID, name, brand, model number, URLs
+    - Categories and breadcrumbs
+    - Pricing: current, range (min/max), currency
+    - Images (high-resolution) and videos
+    - Complete variant details with:
+      * Variant-specific pricing, images, colors
+      * Inventory quantities and stock status
+      * Shipping information and lead times
+      * Availability status
+    - Full specifications and features (grouped)
+    - Product description and warranty information
+    - Resources (installation guides, spec sheets)
+    - Reviews and ratings
+    - Related categories and recommended options
+    - Collection information
+    - Certifications and country of origin
+    - Dimensions and measurements
+    
+    Cost: 10 credits per product detail request
+    
+    Note: URL must be fully qualified and URL-encoded
+    Example: https://www.fergusonhome.com/kohler-k-2362-8/s560423?uid=165232
     """
     # Validate API key
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
     
-    # Validate input
-    if not request.model_number and not request.url:
-        raise HTTPException(
-            status_code=400,
-            detail="Either 'model_number' or 'url' must be provided"
-        )
-    
     start_time = time.time()
     
     try:
-        import sys
-        sys.path.insert(0, '/workspaces/Ai-Catlog-Bot')
-        
-        from unwrangle_ferguson_scraper import UnwrangleFergusonScraper
-        from dataclasses import asdict
-        
-        # Get Unwrangle API key from environment
+        # Get Unwrangle API key
         unwrangle_api_key = os.getenv("UNWRANGLE_API_KEY")
         if not unwrangle_api_key:
             raise HTTPException(
                 status_code=500,
-                detail="Unwrangle API key not configured on server"
+                detail="Unwrangle API key not configured"
             )
         
-        with UnwrangleFergusonScraper(api_key=unwrangle_api_key) as scraper:
-            # Use URL if provided, otherwise try model number search
-            if request.url:
-                product = scraper.scrape_url(request.url)
-                lookup_key = request.url
-            else:
-                product = scraper.scrape_model(request.model_number)
-                lookup_key = request.model_number
-            
-            if not product:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"Product not found for: {lookup_key}"
-                )
-            
-            # Convert to dict
-            product_dict = asdict(product)
-            
-            # Remove raw_data to reduce response size (keep in details if needed)
-            raw_data = product_dict.pop('raw_data', None)
-            
-            # Convert variants to dicts
-            if product_dict.get('variants'):
-                product_dict['variants'] = [
-                    {k: v for k, v in var.items() if v is not None}
-                    for var in product_dict['variants']
-                ]
-            
-            # Remove None values
-            product_dict = {k: v for k, v in product_dict.items() if v is not None}
-            
-            response_time = time.time() - start_time
-            
-            return {
-                "success": True,
-                "data": product_dict,
-                "metadata": {
-                    "source": "unwrangle_ferguson",
-                    "lookup_key": lookup_key,
-                    "lookup_type": "url" if request.url else "model_number",
-                    "response_time": f"{response_time:.2f}s",
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-            }
-    
-    except ImportError as e:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Unwrangle scraper not available: {str(e)}"
-        )
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Ferguson lookup failed: {str(e)}"
-        )
-
-@app.post("/ask-question-ferguson")
-async def ask_question_ferguson(
-    request: FergusonQuestionRequest,
-    x_api_key: Optional[str] = Header(None)
-):
-    """
-    Ask a question about a Ferguson product using AI (OpenAI GPT-4o-mini and xAI Grok).
-    
-    The AI will:
-    1. First search the product data for the answer
-    2. If not found in product data, research and provide detailed information
-    
-    Requires:
-    - question: The question to ask about the product
-    - product_data: The complete Ferguson product data from lookup-ferguson
-    
-    Returns AI-generated answer with source information.
-    """
-    # Validate API key
-    if x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
-    
-    if not request.question or not request.question.strip():
-        raise HTTPException(status_code=400, detail="Question is required")
-    
-    if not request.product_data:
-        raise HTTPException(status_code=400, detail="Product data is required")
-    
-    start_time = time.time()
-    
-    try:
-        # Prepare product context for AI
-        product_title = request.product_data.get('title', 'Unknown Product')
-        product_brand = request.product_data.get('brand', 'Unknown Brand')
-        product_model = request.product_data.get('model_number', 'Unknown Model')
+        # Build API request URL
+        import urllib.parse
+        base_url = "https://data.unwrangle.com/api/getter/"
         
-        # Create a structured summary of product data
-        product_context = f"""Product Information:
-Title: {product_title}
-Brand: {product_brand}
-Model: {product_model}
-"""
+        # URL encode the product URL
+        encoded_url = urllib.parse.quote(request.url, safe='')
         
-        # Add description if available
-        if request.product_data.get('description'):
-            product_context += f"\nDescription: {request.product_data['description']}\n"
+        params = {
+            "platform": "fergusonhome_detail",
+            "url": encoded_url,
+            "page": 1,
+            "api_key": unwrangle_api_key
+        }
         
-        # Add specifications
-        if request.product_data.get('specifications'):
-            product_context += "\nSpecifications:\n"
-            specs = request.product_data['specifications']
-            for key, value in specs.items():
-                product_context += f"  - {key}: {value}\n"
+        # Make request to Unwrangle API
+        import requests
+        response = requests.get(base_url, params=params, timeout=45)
+        response.raise_for_status()
         
-        # Add features
-        if request.product_data.get('features'):
-            product_context += "\nFeatures:\n"
-            for feature in request.product_data['features'][:10]:  # Limit to first 10 features
-                product_context += f"  - {feature}\n"
+        data = response.json()
         
-        # Add pricing info
-        if request.product_data.get('price'):
-            product_context += f"\nPrice: ${request.product_data['price']}\n"
-        
-        # Add variants summary
-        if request.product_data.get('variants'):
-            variants = request.product_data['variants']
-            product_context += f"\nAvailable Variants: {len(variants)} options\n"
-            if variants:
-                product_context += "Variant Options:\n"
-                for var in variants[:5]:  # First 5 variants
-                    var_name = var.get('name', 'Variant')
-                    var_price = var.get('price', 'N/A')
-                    product_context += f"  - {var_name}: ${var_price}\n"
-        
-        # Try OpenAI first
-        ai_response = None
-        ai_provider = None
-        error_messages = []
-        
-        for provider_name in ["openai", "xai"]:
-            provider = AI_PROVIDERS.get(provider_name)
-            if not provider or not provider["enabled"]:
-                error_messages.append(f"{provider_name}: Not configured")
-                continue
-            
-            try:
-                client = provider["client"]
-                model = provider["model"]
-                
-                prompt = f"""You are a helpful product expert assistant. A user has looked up a Ferguson/Build.com product and has a question about it.
-
-{product_context}
-
-User's Question: {request.question}
-
-Instructions:
-1. First, check if the answer can be found in the product information provided above
-2. If the answer IS in the product data, provide it clearly and reference where you found it
-3. If the answer is NOT in the product data, use your knowledge to research and provide helpful, accurate information about this type of product or the specific question asked
-4. Be specific, helpful, and concise
-5. If you're unsure, say so and provide the best information you can
-
-Provide your answer now:"""
-
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": "You are a helpful product expert who answers questions about Ferguson/Build.com products. You provide accurate, detailed information and clearly indicate whether information comes from the product data or your general knowledge."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1000
-                )
-                
-                ai_response = response.choices[0].message.content
-                ai_provider = provider["name"]
-                
-                # Track metrics
-                ai_metrics[provider_name]["total_requests"] += 1
-                ai_metrics[provider_name]["successful_requests"] += 1
-                ai_metrics[provider_name]["last_used"] = datetime.utcnow().isoformat()
-                
-                if hasattr(response, 'usage'):
-                    tokens = response.usage.total_tokens
-                    ai_metrics[provider_name]["total_tokens_used"] += tokens
-                    ai_metrics[provider_name]["avg_tokens"] = (
-                        ai_metrics[provider_name]["total_tokens_used"] / 
-                        ai_metrics[provider_name]["successful_requests"]
-                    )
-                
-                break  # Success, exit loop
-                
-            except Exception as e:
-                error_messages.append(f"{provider_name}: {str(e)}")
-                ai_metrics[provider_name]["total_requests"] += 1
-                ai_metrics[provider_name]["failed_requests"] += 1
-                continue
-        
-        if not ai_response:
+        if not data.get("success"):
             raise HTTPException(
-                status_code=503,
-                detail=f"All AI providers failed. Errors: {'; '.join(error_messages)}"
+                status_code=500,
+                detail="Ferguson product detail request returned unsuccessful response"
             )
         
         response_time = time.time() - start_time
         
         return {
             "success": True,
-            "data": {
-                "question": request.question,
-                "answer": ai_response,
-                "product_title": product_title,
-                "product_brand": product_brand,
-                "product_model": product_model
-            },
+            "platform": "fergusonhome_detail",
+            "url": request.url,
+            "result_count": data.get("result_count", 0),
+            "detail": data.get("detail", {}),
+            "credits_used": data.get("credits_used", 10),
             "metadata": {
-                "ai_provider": ai_provider,
                 "response_time": f"{response_time:.2f}s",
                 "timestamp": datetime.utcnow().isoformat(),
-                "source": "ferguson_product_qa"
+                "api_version": "fergusonhome_detail_v1"
             }
         }
-        
-    except HTTPException:
-        raise
+    
+    except requests.RequestException as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Unwrangle API request failed: {str(e)}"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            detail=f"Question answering failed: {str(e)}"
+            detail=f"Ferguson product detail lookup failed: {str(e)}"
         )
+
+
 
 # Error handlers
 @app.exception_handler(HTTPException)
