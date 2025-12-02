@@ -63,47 +63,107 @@ function FergusonApp() {
         <h3 className="text-lg font-semibold text-gray-900 mb-3">
           Available Variants ({variants.length})
         </h3>
-        <div className="space-y-3 max-h-96 overflow-y-auto">
+        <div className="space-y-4 max-h-96 overflow-y-auto">
           {variants.map((variant, idx) => (
-            <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-              <div className="grid grid-cols-2 gap-3">
-                {variant.name && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-500">Variant</span>
-                    <p className="text-sm text-gray-900">{variant.name}</p>
+            <div key={idx} className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow">
+              <div className="flex gap-4">
+                {/* Variant Image */}
+                {variant.image_url && (
+                  <div className="flex-shrink-0">
+                    <img 
+                      src={variant.image_url} 
+                      alt={variant.name}
+                      className="w-24 h-24 object-cover rounded"
+                      onError={(e) => e.target.style.display = 'none'}
+                    />
                   </div>
                 )}
-                {variant.sku && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-500">SKU</span>
-                    <p className="text-sm text-gray-900">{variant.sku}</p>
+                
+                <div className="flex-grow">
+                  {/* Variant Header */}
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h4 className="font-semibold text-gray-900">{variant.name || variant.title}</h4>
+                      {variant.sku && (
+                        <p className="text-xs text-gray-500 font-mono">{variant.sku}</p>
+                      )}
+                    </div>
+                    {variant.price && (
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-green-600">${variant.price.toFixed(2)}</p>
+                        {variant.currency && variant.currency !== 'USD' && (
+                          <p className="text-xs text-gray-500">{variant.currency}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
-                {variant.price && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-500">Price</span>
-                    <p className="text-sm font-semibold text-green-600">${variant.price}</p>
+
+                  {/* Variant Info Grid */}
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-2">
+                    {variant.availability && (
+                      <div>
+                        <span className="text-gray-500">Status:</span>
+                        <span className={`ml-1 font-medium ${variant.stock_status === 'in_stock' ? 'text-green-600' : 'text-red-600'}`}>
+                          {variant.availability}
+                        </span>
+                      </div>
+                    )}
+                    {variant.attributes?.color && (
+                      <div>
+                        <span className="text-gray-500">Color:</span>
+                        <span className="ml-1">{variant.attributes.color}</span>
+                      </div>
+                    )}
+                    {variant.attributes?.inventory_quantity !== undefined && (
+                      <div>
+                        <span className="text-gray-500">Stock:</span>
+                        <span className="ml-1 font-medium">{variant.attributes.inventory_quantity} units</span>
+                      </div>
+                    )}
+                    {variant.attributes?.shipping_lead_time && (
+                      <div>
+                        <span className="text-gray-500">Lead Time:</span>
+                        <span className="ml-1">{variant.attributes.shipping_lead_time}</span>
+                      </div>
+                    )}
+                    {variant.attributes?.estimated_delivery && (
+                      <div>
+                        <span className="text-gray-500">Delivery:</span>
+                        <span className="ml-1">{variant.attributes.estimated_delivery}</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {variant.availability && (
-                  <div>
-                    <span className="text-xs font-medium text-gray-500">Availability</span>
-                    <p className="text-sm text-gray-900">{variant.availability}</p>
-                  </div>
-                )}
-              </div>
-              {variant.attributes && Object.keys(variant.attributes).length > 0 && (
-                <div className="mt-2 pt-2 border-t border-gray-200">
-                  <span className="text-xs font-medium text-gray-500">Attributes:</span>
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {Object.entries(variant.attributes).map(([key, value]) => (
-                      <span key={key} className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                        {key}: {value}
+
+                  {/* Variant Badges */}
+                  <div className="flex flex-wrap gap-1">
+                    {variant.attributes?.is_quick_ship && (
+                      <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">⚡ Quick Ship</span>
+                    )}
+                    {variant.attributes?.has_free_shipping && (
+                      <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">📦 Free Shipping</span>
+                    )}
+                    {variant.attributes?.is_made_to_order && (
+                      <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">🛠️ Made to Order</span>
+                    )}
+                    {variant.attributes?.swatch_color && (
+                      <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded flex items-center">
+                        <span 
+                          className="w-3 h-3 rounded-full mr-1 border border-gray-300" 
+                          style={{backgroundColor: `#${variant.attributes.swatch_color}`}}
+                        ></span>
+                        Color
                       </span>
-                    ))}
+                    )}
                   </div>
+
+                  {/* Shipping Message */}
+                  {variant.attributes?.shipping_message && (
+                    <p className="text-xs text-gray-600 mt-2 italic">
+                      {variant.attributes.shipping_message}
+                    </p>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ))}
         </div>
@@ -324,25 +384,105 @@ function FergusonApp() {
               <div className="card space-y-6">
                 {/* Product Header */}
                 <div className="border-b border-gray-200 pb-4">
+                  {/* Brand Logo */}
+                  {productData.brand_logo?.url && (
+                    <div className="mb-3">
+                      <img 
+                        src={productData.brand_logo.url} 
+                        alt={productData.brand_logo.description || productData.brand}
+                        className="h-12 object-contain"
+                      />
+                    </div>
+                  )}
+                  
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                    {productData.title || 'Product Details'}
+                    {productData.title || productData.name || 'Product Details'}
                   </h2>
-                  {productData.brand && (
-                    <p className="text-lg text-gray-600">
-                      Brand: <span className="font-semibold">{productData.brand}</span>
-                    </p>
+                  
+                  <div className="flex flex-wrap gap-4 mb-2">
+                    {productData.brand && (
+                      <div>
+                        <span className="text-sm text-gray-600">Brand:</span>
+                        {productData.brand_url ? (
+                          <a 
+                            href={productData.brand_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="ml-2 font-semibold text-blue-600 hover:text-blue-800"
+                          >
+                            {productData.brand}
+                          </a>
+                        ) : (
+                          <span className="ml-2 font-semibold text-gray-900">{productData.brand}</span>
+                        )}
+                      </div>
+                    )}
+                    {productData.model_number && (
+                      <div>
+                        <span className="text-sm text-gray-600">Model:</span>
+                        <span className="ml-2 font-mono text-gray-900">{productData.model_number}</span>
+                      </div>
+                    )}
+                    {productData.id && (
+                      <div>
+                        <span className="text-sm text-gray-600">Product ID:</span>
+                        <span className="ml-2 text-gray-900">{productData.id}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Categories */}
+                  {productData.categories && productData.categories.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {productData.categories.map((cat, idx) => (
+                        <a
+                          key={idx}
+                          href={cat.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded hover:bg-blue-100"
+                        >
+                          {cat.name}
+                        </a>
+                      ))}
+                    </div>
                   )}
-                  {productData.model_number && (
-                    <p className="text-sm text-gray-500">
-                      Model: {productData.model_number}
-                    </p>
-                  )}
+
+                  {/* Status Badges */}
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {productData.is_discontinued && (
+                      <span className="px-2 py-1 bg-red-100 text-red-800 text-xs font-medium rounded">
+                        ⚠️ DISCONTINUED
+                      </span>
+                    )}
+                    {productData.has_free_installation && (
+                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">
+                        🔧 Free Installation
+                      </span>
+                    )}
+                    {productData.is_by_appointment_only && (
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">
+                        📅 By Appointment Only
+                      </span>
+                    )}
+                    {productData.has_accessories && (
+                      <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
+                        🔩 Accessories Available
+                      </span>
+                    )}
+                    {productData.has_replacement_parts && (
+                      <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs font-medium rounded">
+                        🔧 Replacement Parts Available
+                      </span>
+                    )}
+                  </div>
+                  
                   {productData.url && (
                     <a 
                       href={productData.url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center mt-2"
+                      className="text-sm text-blue-600 hover:text-blue-800 inline-flex items-center mt-3"
                     >
                       View on Ferguson
                       <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -353,23 +493,51 @@ function FergusonApp() {
                 </div>
 
                 {/* Pricing */}
-                {(productData.price || productData.original_price) && (
-                  <div className="flex items-baseline gap-4">
-                    {productData.price && (
-                      <div>
-                        <span className="text-3xl font-bold text-green-600">
-                          ${productData.price}
+                {(productData.price || productData.price_range || productData.original_price) && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <div className="flex items-baseline gap-4 mb-2">
+                      {productData.price ? (
+                        <div>
+                          <span className="text-3xl font-bold text-green-600">
+                            ${productData.price.toFixed(2)}
+                          </span>
+                          {productData.currency && productData.currency !== 'USD' && (
+                            <span className="text-gray-500 ml-2">{productData.currency}</span>
+                          )}
+                        </div>
+                      ) : productData.price_range?.has_range && (
+                        <div>
+                          <span className="text-2xl font-bold text-green-600">
+                            ${productData.price_range.min?.toFixed(2)} - ${productData.price_range.max?.toFixed(2)}
+                          </span>
+                          <span className="text-sm text-gray-600 ml-2">Price Range</span>
+                        </div>
+                      )}
+                      {productData.original_price && productData.original_price !== productData.price && (
+                        <span className="text-lg text-gray-500 line-through">
+                          ${productData.original_price.toFixed(2)}
                         </span>
-                        {productData.currency && (
-                          <span className="text-gray-500 ml-2">{productData.currency}</span>
-                        )}
-                      </div>
-                    )}
-                    {productData.original_price && productData.original_price !== productData.price && (
-                      <span className="text-lg text-gray-500 line-through">
-                        ${productData.original_price}
-                      </span>
-                    )}
+                      )}
+                    </div>
+                    
+                    {/* Shipping Info */}
+                    <div className="flex flex-wrap gap-3 text-sm">
+                      {productData.shipping_fee !== undefined && productData.shipping_fee !== null && (
+                        <div className="flex items-center">
+                          <svg className="w-4 h-4 text-gray-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                          <span className="text-gray-700">
+                            {productData.shipping_fee === 0 ? 'FREE Shipping' : `Shipping: $${productData.shipping_fee}`}
+                          </span>
+                        </div>
+                      )}
+                      {productData.configuration_type && (
+                        <div className="text-gray-600">
+                          <span className="font-medium">Configuration:</span> {productData.configuration_type}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -407,10 +575,34 @@ function FergusonApp() {
                       <span className="ml-2 text-gray-900">{productData.product_type}</span>
                     </div>
                   )}
+                  {productData.base_type && (
+                    <div>
+                      <span className="font-medium text-gray-600">Base Type:</span>
+                      <span className="ml-2 text-gray-900">{productData.base_type}</span>
+                    </div>
+                  )}
+                  {productData.application && (
+                    <div>
+                      <span className="font-medium text-gray-600">Application:</span>
+                      <span className="ml-2 text-gray-900">{productData.application}</span>
+                    </div>
+                  )}
+                  {productData.business_category && (
+                    <div>
+                      <span className="font-medium text-gray-600">Business Category:</span>
+                      <span className="ml-2 text-gray-900">{productData.business_category}</span>
+                    </div>
+                  )}
                   {productData.upc && (
                     <div>
                       <span className="font-medium text-gray-600">UPC:</span>
-                      <span className="ml-2 text-gray-900">{productData.upc}</span>
+                      <span className="ml-2 text-gray-900 font-mono text-xs">{productData.upc}</span>
+                    </div>
+                  )}
+                  {productData.barcode && (
+                    <div>
+                      <span className="font-medium text-gray-600">Barcode:</span>
+                      <span className="ml-2 text-gray-900 font-mono text-xs">{productData.barcode}</span>
                     </div>
                   )}
                   {productData.country_of_origin && (
@@ -419,16 +611,28 @@ function FergusonApp() {
                       <span className="ml-2 text-gray-900">{productData.country_of_origin}</span>
                     </div>
                   )}
-                  {productData.shipping_fee !== undefined && (
-                    <div>
-                      <span className="font-medium text-gray-600">Shipping Fee:</span>
-                      <span className="ml-2 text-gray-900">${productData.shipping_fee}</span>
-                    </div>
-                  )}
                   {productData.total_inventory_quantity !== undefined && (
                     <div>
                       <span className="font-medium text-gray-600">Total Stock:</span>
                       <span className="ml-2 text-green-700 font-semibold">{productData.total_inventory_quantity} units</span>
+                    </div>
+                  )}
+                  {productData.variant_count !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Variants:</span>
+                      <span className="ml-2 text-gray-900">{productData.variant_count} available</span>
+                    </div>
+                  )}
+                  {productData.in_stock_variant_count !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">In Stock:</span>
+                      <span className="ml-2 text-green-700 font-semibold">{productData.in_stock_variant_count} variants</span>
+                    </div>
+                  )}
+                  {productData.is_configurable !== undefined && (
+                    <div>
+                      <span className="font-medium text-gray-600">Configurable:</span>
+                      <span className="ml-2 text-gray-900">{productData.is_configurable ? 'Yes' : 'No'}</span>
                     </div>
                   )}
                 </div>
@@ -584,6 +788,70 @@ function FergusonApp() {
 
                 {/* Variants */}
                 {renderVariants(productData.variants)}
+
+                {/* Recommended Options */}
+                {productData.recommended_options && productData.recommended_options.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      💡 Recommended Options ({productData.recommended_options.length})
+                    </h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                      {productData.recommended_options.map((option, idx) => (
+                        <div key={idx} className="border border-gray-200 rounded-lg p-3 bg-white hover:shadow-md transition-shadow">
+                          {option.image_url && (
+                            <img 
+                              src={option.image_url} 
+                              alt={option.label}
+                              className="w-full h-32 object-cover rounded mb-2"
+                              onError={(e) => e.target.style.display = 'none'}
+                            />
+                          )}
+                          <p className="text-sm font-medium text-gray-900">{option.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Related Categories */}
+                {productData.related_categories && productData.related_categories.length > 0 && (
+                  <div className="mt-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                      Related Categories
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {productData.related_categories.map((cat, idx) => (
+                        <a
+                          key={idx}
+                          href={cat.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-sm rounded-lg transition-colors"
+                        >
+                          {cat.name}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Replacement Parts */}
+                {productData.replacement_parts_url && (
+                  <div className="mt-6">
+                    <a
+                      href={productData.replacement_parts_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-orange-50 border border-orange-200 text-orange-800 rounded-lg hover:bg-orange-100 transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      View Replacement Parts
+                    </a>
+                  </div>
+                )}
 
                 {/* Metadata */}
                 <div className="mt-6 pt-6 border-t border-gray-200">
