@@ -1745,11 +1745,12 @@ def generate_model_variations(model_number: str) -> list:
             # Format: G9104BNI -> G-9104-BNI
             if model[0].isalpha() and model[1:5].isdigit():
                 variations.append(f"{model[0]}-{model[1:5]}-{model[5:]}")
-            # Format: 97621SHP -> 97621-SHP
+            # Format: 97621SHP -> 97621-SHP or UC15IP -> UC15-IP or UC-15IP
             for i in range(2, len(model)-1):
                 if model[i].isalpha() and model[i-1].isdigit():
-                    variations.append(f"{model[:i]}-{model[i:]}")
-                    break
+                    variations.append(f"{model[:i]}-{model[i:]}")  # UC15IP -> UC15-IP
+                if model[i].isdigit() and model[i-1].isalpha() and i > 1:
+                    variations.append(f"{model[:i]}-{model[i:]}")  # UC15IP -> UC-15IP
     
     # Remove duplicates while preserving order
     seen = set()
