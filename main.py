@@ -1714,7 +1714,360 @@ async def get_ferguson_product_detail(
             detail=f"Ferguson product detail lookup failed: {str(e)}"
         )
 
+# ============================================================================
+# FERGUSON COMPLETE LOOKUP (Smart Matching + Data Merging)
+# ============================================================================
 
+class FergusonCompleteLookupRequest(BaseModel):
+    """Request model for complete Ferguson product lookup"""
+    model_number: str = Field(..., description="Manufacturer model number")
+
+def generate_model_variations(model_number: str) -> list:
+    """
+    Generate common model number format variations for smart matching.
+    Returns list of possible variations to try.
+    """
+    model = model_number.strip()
+    variations = [model]  # Original
+    
+    # Common brand prefixes
+    prefixes = ["K-", "G-", "M-", "A-"]
+    for prefix in prefixes:
+        if not model.upper().startswith(prefix.upper()):
+            variations.append(f"{prefix}{model}")
+    
+    # Add/remove hyphens
+    if "-" in model:
+        variations.append(model.replace("-", ""))  # Remove all hyphens
+    else:
+        # Try adding hyphens in common positions
+        if len(model) > 4:
+            # Format: G9104BNI -> G-9104-BNI
+            if model[0].isalpha() and model[1:5].isdigit():
+                variations.append(f"{model[0]}-{model[1:5]}-{model[5:]}")
+            # Format: 97621SHP -> 97621-SHP
+            for i in range(2, len(model)-1):
+                if model[i].isalpha() and model[i-1].isdigit():
+                    variations.append(f"{model[:i]}-{model[i:]}")
+                    break
+    
+    # Remove duplicates while preserving order
+    seen = set()
+    unique_variations = []
+    for v in variations:
+        v_upper = v.upper()
+        if v_upper not in seen:
+            seen.add(v_upper)
+            unique_variations.append(v)
+    
+    return unique_variations
+
+def find_matching_variant(search_results: dict, model_number: str, fuzzy: bool = False) -> tuple:
+    """
+    Find the variant that matches the requested model number.
+    Returns tuple: (variant_url, matched_model, match_type)
+    
+    Match types: 'exact', 'variation', 'partial', None
+    """
+    model_upper = model_number.upper().strip()
+    variations = generate_model_variations(model_number) if fuzzy else [model_number]
+    
+    # Try exact matches first
+    for variation in variations:
+        variation_upper = variation.upper().strip()
+        for product in search_results.get("products", []):
+            for variant in product.get("variants", []):
+                variant_model = variant.get("model_no", "").upper().strip()
+                
+                # Exact match
+                if variant_model == variation_upper:
+                    match_type = 'exact' if variation == model_number else 'variation'
+                    return (variant.get("url"), variant.get("model_no"), match_type)
+    
+    # Try partial matches (variant contains search term)
+    if fuzzy:
+        for product in search_results.get("products", []):
+            for variant in product.get("variants", []):
+                variant_model = variant.get("model_no", "").upper().strip()
+                
+                # Partial match - variant contains model number
+                if model_upper in variant_model or variant_model in model_upper:
+                    return (variant.get("url"), variant.get("model_no"), 'partial')
+    
+    return (None, None, None)
+
+@app.post("/lookup-ferguson-complete")
+async def lookup_ferguson_complete(
+    request: FergusonCompleteLookupRequest,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Complete Ferguson product lookup - executes all 3 steps automatically.
+    
+    This is the RECOMMENDED endpoint to use for product enrichment.
+    It handles:
+    1. Searching for the product
+    2. Finding matching variant (with smart format variations)
+    3. Fetching complete product attributes
+    4. Merging data from both search and detail endpoints
+    
+    Returns: Complete product data ready for enrichment
+    Cost: 20 credits (10 for search + 10 for detail)
+    """
+    if x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    unwrangle_api_key = os.getenv("UNWRANGLE_API_KEY")
+    if not unwrangle_api_key:
+        raise HTTPException(status_code=500, detail="Unwrangle API key not configured")
+    
+    model_number = request.model_number
+    overall_start = time.time()
+    
+    try:
+        import requests
+        import urllib.parse
+        
+        # STEP 1: Search for product
+        print(f"Step 1: Searching for model {model_number}...")
+        step1_start = time.time()
+        search_params = {
+            "api_key": unwrangle_api_key,
+            "platform": "fergusonhome_search",
+            "search": model_number,
+            "page": 1
+        }
+        search_response = requests.get("https://data.unwrangle.com/api/getter/", params=search_params, timeout=45)
+        search_response.raise_for_status()
+        search_data = search_response.json()
+        step1_time = time.time() - step1_start
+        
+        if not search_data.get("success"):
+            raise HTTPException(status_code=404, detail="Product not found in Ferguson")
+        
+        if not search_data.get("results"):
+            raise HTTPException(
+                status_code=404,
+                detail=f"No products found for model {model_number}"
+            )
+        
+        print(f"Step 1: ✓ Found {len(search_data.get('results', []))} products ({step1_time:.2f}s)")
+        
+        # STEP 2: Find matching variant with smart format-aware matching
+        print(f"Step 2: Finding variant match for {model_number} (with format variations)...")
+        step2_start = time.time()
+        
+        # Store search result data before matching
+        search_product_data = None
+        for product in search_data.get("results", []):
+            for variant in product.get("variants", []):
+                if variant.get("model_no", "").upper().strip() == model_number.upper().strip():
+                    search_product_data = product  # Store the parent product data
+                    break
+            if search_product_data:
+                break
+        
+        # Use smart matching with fuzzy=True
+        match_result = find_matching_variant(
+            {"products": search_data.get("results", [])},
+            model_number,
+            fuzzy=True
+        )
+        step2_time = time.time() - step2_start
+        
+        if not match_result or not match_result[0]:
+            # Return available variants for debugging
+            available_variants = []
+            for product in search_data.get("results", []):
+                for variant in product.get("variants", []):
+                    available_variants.append(variant.get("model_no"))
+            
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "Variant not found",
+                    "requested_model": model_number,
+                    "available_models": available_variants,
+                    "hint": "No match found even with format variations (K- prefix, hyphens, etc.)",
+                    "total_products_found": len(search_data.get("results", [])),
+                    "total_variants_found": len(available_variants)
+                }
+            )
+        
+        # Unpack the result tuple
+        variant_url, matched_model, match_type = match_result
+        print(f"Step 2: ✓ Matched '{model_number}' → '{matched_model}' ({match_type} match, {step2_time:.2f}s)")
+        
+        # STEP 3: Get complete product details
+        print(f"Step 3: Fetching complete product attributes...")
+        step3_start = time.time()
+        
+        # Ensure variant_url is a string before encoding
+        if not isinstance(variant_url, str):
+            raise HTTPException(
+                status_code=500,
+                detail=f"Invalid variant URL type: {type(variant_url)}"
+            )
+        
+        encoded_url = urllib.parse.quote(variant_url, safe='')
+        
+        detail_params = {
+            "api_key": unwrangle_api_key,
+            "platform": "fergusonhome_detail",
+            "url": encoded_url,
+            "page": 1
+        }
+        detail_response = requests.get("https://data.unwrangle.com/api/getter/", params=detail_params, timeout=45)
+        detail_response.raise_for_status()
+        detail_data = detail_response.json()
+        step3_time = time.time() - step3_start
+        
+        if not detail_data.get("success"):
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to fetch product details"
+            )
+        
+        print(f"Step 3: ✓ Retrieved complete product data ({step3_time:.2f}s)")
+        
+        # Return COMPLETE product information - MERGE data from BOTH search and detail endpoints
+        product_detail = detail_data.get("detail", {})
+        overall_time = time.time() - overall_start
+        
+        return {
+            "success": True,
+            "model_number": model_number,
+            "matched_model": matched_model,
+            "match_type": match_type,
+            "variant_url": variant_url,
+            "product": {
+                # ========== BASIC INFORMATION (merged from both endpoints) ==========
+                "id": product_detail.get("id") or (search_product_data.get("id") if search_product_data else None),
+                "family_id": search_product_data.get("family_id") if search_product_data else None,
+                "name": product_detail.get("name") or (search_product_data.get("name") if search_product_data else None),
+                "brand": product_detail.get("brand") or (search_product_data.get("brand") if search_product_data else None),
+                "brand_url": product_detail.get("brand_url"),
+                "brand_logo": product_detail.get("brand_logo"),
+                "model_number": product_detail.get("model_number"),
+                "url": product_detail.get("url"),
+                "product_type": product_detail.get("product_type"),
+                "application": product_detail.get("application"),
+                
+                # ========== PRICING & INVENTORY (merged from both endpoints) ==========
+                "price": product_detail.get("price") or (search_product_data.get("price") if search_product_data else None),
+                "price_min": search_product_data.get("price_min") if search_product_data else None,
+                "price_max": search_product_data.get("price_max") if search_product_data else None,
+                "unit_price": search_product_data.get("unit_price") if search_product_data else None,
+                "price_type": search_product_data.get("price_type") if search_product_data else None,
+                "price_range": product_detail.get("price_range", {}),
+                "currency": product_detail.get("currency") or (search_product_data.get("currency") if search_product_data else None),
+                "base_type": product_detail.get("base_type"),
+                "shipping_fee": product_detail.get("shipping_fee"),
+                "has_free_installation": product_detail.get("has_free_installation"),
+                
+                # ========== INVENTORY & VARIANTS (merged from both endpoints) ==========
+                "variants": product_detail.get("variants", []) or (search_product_data.get("variants", []) if search_product_data else []),
+                "variant_count": product_detail.get("variant_count") or (search_product_data.get("variant_count") if search_product_data else None),
+                "has_variant_groups": product_detail.get("has_variant_groups"),
+                "has_in_stock_variants": product_detail.get("has_in_stock_variants") or (search_product_data.get("has_in_stock_variants") if search_product_data else None),
+                "all_variants_in_stock": product_detail.get("all_variants_in_stock") or (search_product_data.get("all_variants_in_stock") if search_product_data else None),
+                "all_variants_restricted": search_product_data.get("all_variants_restricted") if search_product_data else None,
+                "total_inventory_quantity": product_detail.get("total_inventory_quantity") or (search_product_data.get("total_inventory_quantity") if search_product_data else None),
+                "in_stock_variant_count": product_detail.get("in_stock_variant_count") or (search_product_data.get("in_stock_variant_count") if search_product_data else None),
+                "is_configurable": product_detail.get("is_configurable") or (search_product_data.get("is_configurable") if search_product_data else None),
+                "is_square_footage_based": search_product_data.get("is_square_footage_based") if search_product_data else None,
+                "configuration_type": product_detail.get("configuration_type"),
+                
+                # ========== IMAGES & VIDEOS (merged from both endpoints) ==========
+                "images": product_detail.get("images", []) or (search_product_data.get("images", []) if search_product_data else []),
+                "thumbnail": product_detail.get("thumbnail") or (search_product_data.get("thumbnail") if search_product_data else None),
+                "videos": product_detail.get("videos", []),
+                
+                # ========== PRODUCT DETAILS ==========
+                "description": product_detail.get("description"),
+                "is_discontinued": product_detail.get("is_discontinued"),
+                
+                # ========== SPECIFICATIONS (CRITICAL!) ==========
+                "specifications": product_detail.get("specifications", {}),
+                "feature_groups": product_detail.get("feature_groups", []),
+                "dimensions": product_detail.get("dimensions", {}),
+                "attribute_ids": product_detail.get("attribute_ids", []),
+                
+                # ========== IDENTIFIERS ==========
+                "upc": product_detail.get("upc"),
+                "barcode": product_detail.get("barcode"),
+                
+                # ========== CERTIFICATIONS & COMPLIANCE ==========
+                "certifications": product_detail.get("certifications", []),
+                "country_of_origin": product_detail.get("country_of_origin"),
+                
+                # ========== WARRANTY ==========
+                "warranty": product_detail.get("warranty"),
+                "manufacturer_warranty": product_detail.get("manufacturer_warranty"),
+                
+                # ========== RESOURCES & DOCUMENTATION ==========
+                "resources": product_detail.get("resources", []),
+                
+                # ========== CATEGORIES ==========
+                "categories": product_detail.get("categories", []),
+                "base_category": product_detail.get("base_category"),
+                "business_category": product_detail.get("business_category"),
+                "related_categories": product_detail.get("related_categories", []),
+                
+                # ========== REVIEWS & RATINGS (merged from both endpoints) ==========
+                "rating": product_detail.get("rating") or (search_product_data.get("rating") if search_product_data else None),
+                "total_ratings": search_product_data.get("total_ratings") if search_product_data else None,
+                "review_count": product_detail.get("review_count"),
+                "total_reviews": product_detail.get("total_reviews") or (search_product_data.get("total_ratings") if search_product_data else None),
+                "questions_count": product_detail.get("questions_count"),
+                
+                # ========== COLLECTION (merged from both endpoints) ==========
+                "collection": product_detail.get("collection") or (search_product_data.get("collection") if search_product_data else None),
+                
+                # ========== SHIPPING INFO (from search) ==========
+                "is_quick_ship": search_product_data.get("is_quick_ship") if search_product_data else None,
+                "shipping_info": search_product_data.get("shipping_info") if search_product_data else None,
+                
+                # ========== SPECIAL FLAGS (from search) ==========
+                "is_appointment_only_brand": search_product_data.get("is_appointment_only_brand") if search_product_data else None,
+                
+                # ========== RELATED PRODUCTS & OPTIONS ==========
+                "has_recommended_options": product_detail.get("has_recommended_options"),
+                "recommended_options": product_detail.get("recommended_options", []),
+                "has_accessories": product_detail.get("has_accessories"),
+                "has_replacement_parts": product_detail.get("has_replacement_parts"),
+                "replacement_parts_url": product_detail.get("replacement_parts_url"),
+                
+                # ========== SPECIAL FLAGS ==========
+                "is_by_appointment_only": product_detail.get("is_by_appointment_only")
+            },
+            "credits_used": 20,
+            "steps_completed": {
+                "1_search": "✓",
+                "2_variant_match": "✓",
+                "3_detail_fetch": "✓"
+            },
+            "performance": {
+                "step1_search_time": f"{step1_time:.2f}s",
+                "step2_match_time": f"{step2_time:.2f}s",
+                "step3_detail_time": f"{step3_time:.2f}s",
+                "total_time": f"{overall_time:.2f}s"
+            },
+            "search_meta_data": search_data.get("meta_data", {}),
+            "metadata": {
+                "timestamp": datetime.utcnow().isoformat(),
+                "api_version": "ferguson_complete_v1",
+                "data_sources": "merged_search_and_detail"
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Complete lookup failed: {str(e)}"
+        )
 
 # Error handlers
 @app.exception_handler(HTTPException)
