@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferguson Search Test - CL4250SID/O</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-6">Ferguson Multi-Tier Search Test</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test: CL4250SID/O</h2>
+            
+            <button 
+                onclick="testSearch()" 
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+            >
+                Run Search Test
+            </button>
+            
+            <button 
+                onclick="clearResults()" 
+                class="ml-3 px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 font-semibold"
+            >
+                Clear
+            </button>
+        </div>
+        
+        <div id="results" class="space-y-4"></div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+        const API_KEY = 'catbot123';
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testSearch() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<div class="bg-blue-50 p-4 rounded-lg">🔍 Searching for CL4250SID/O...</div>';
+            
+            try {
+                // Step 1: Search
+                const searchResponse = await fetch(`${API_URL}/search-ferguson`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-KEY': API_KEY
+                    },
+                    body: JSON.stringify({
+                        search: 'CL4250SID/O',
+                        page: 1
+                    })
+                });
+                
+                const searchData = await searchResponse.json();
+                
+                // Display search results
+                let html = '<div class="bg-white rounded-lg shadow p-6 space-y-4">';
+                html += '<h3 class="text-lg font-bold">Search Results</h3>';
+                
+                if (searchData.success) {
+                    // Show search strategy
+                    if (searchData.search_strategy) {
+                        const strategy = searchData.search_strategy;
+                        let tierColor = 'bg-blue-100 text-blue-800';
+                        if (strategy.tier_used === 'symbol_stripped') tierColor = 'bg-yellow-100 text-yellow-800';
+                        if (strategy.tier_used === 'fuzzy') tierColor = 'bg-orange-100 text-orange-800';
+                        
+                        html += `<div class="p-3 ${tierColor} rounded-lg">`;
+                        html += `<div class="font-semibold">Search Tier: ${strategy.tier_used}</div>`;
+                        html += `<div class="text-sm mt-1">${strategy.explanation}</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Show match info
+                    if (searchData.match_info) {
+                        html += `<div class="p-3 bg-gray-100 rounded-lg">`;
+                        html += `<div><strong>Search Term:</strong> ${searchData.match_info.search_term}</div>`;
+                        html += `<div><strong>Exact Matches:</strong> ${searchData.exact_match_count}</div>`;
+                        html += `<div><strong>Partial Matches:</strong> ${searchData.partial_match_count}</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Show products
+                    html += `<div class="mt-4"><strong>Products Found:</strong> ${searchData.products.length}</div>`;
+                    
+                    if (searchData.products.length > 0) {
+                        for (let i = 0; i < searchData.products.length; i++) {
+                            const product = searchData.products[i];
+                            const borderClass = product.is_exact_match ? 'border-2 border-green-500' : 'border border-gray-200';
+                            
+                            html += `<div class="${borderClass} p-4 rounded-lg mt-3">`;
+                            if (product.is_exact_match) {
+                                html += `<div class="bg-green-500 text-white text-xs font-bold px-2 py-1 inline-block rounded mb-2">✓ EXACT MATCH</div>`;
+                            }
+                            html += `<div><strong>Brand:</strong> ${product.brand || 'N/A'}</div>`;
+                            html += `<div><strong>Model:</strong> ${product.model_number || 'None (will be in detail)'}</div>`;
+                            html += `<div><strong>Name:</strong> ${product.name}</div>`;
+                            html += `<div class="mt-2">`;
+                            html += `<button onclick="getProductDetail('${product.url}')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm font-semibold">View Complete Details</button>`;
+                            html += `</div>`;
+                            html += `</div>`;
+                        }
+                    }
+                } else {
+                    html += `<div class="text-red-600">Error: ${searchData.error || 'Search failed'}</div>`;
+                }
+                
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="bg-red-50 text-red-800 p-4 rounded-lg">Error: ${error.message}</div>`;
+            }
+        }
+        
+        async function getProductDetail(url) {
+            const resultsDiv = document.getElementById('results');
+            const detailDiv = document.createElement('div');
+            detailDiv.className = 'bg-white rounded-lg shadow p-6 mt-4';
+            detailDiv.innerHTML = '<div class="text-blue-600">🔍 Loading product details...</div>';
+            resultsDiv.appendChild(detailDiv);
+            
+            try {
+                const response = await fetch(`${API_URL}/product-detail-ferguson`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-KEY': API_KEY
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                let html = '<h3 class="text-lg font-bold mb-4">Product Details</h3>';
+                
+                if (data.success) {
+                    const detail = data.detail;
+                    
+                    html += `<div class="space-y-2">`;
+                    html += `<div><strong>Name:</strong> ${detail.name}</div>`;
+                    html += `<div><strong>Brand:</strong> ${detail.brand}</div>`;
+                    html += `<div><strong>Model Number:</strong> ${detail.model_number}</div>`;
+                    html += `<div><strong>Price:</strong> $${detail.price?.toLocaleString()}</div>`;
+                    html += `</div>`;
+                    
+                    // Show variants
+                    if (data.variant_info && data.variant_info.variant_models && data.variant_info.variant_models.length > 0) {
+                        html += `<div class="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-lg">`;
+                        html += `<div class="font-bold text-amber-900 mb-2">🔀 Related Model Variants:</div>`;
+                        html += `<div class="space-y-1">`;
+                        
+                        for (const variant of data.variant_info.variant_models) {
+                            const isMatch = variant.toUpperCase() === 'CL4250SID/O';
+                            const matchBadge = isMatch ? '<span class="ml-2 bg-green-500 text-white text-xs px-2 py-1 rounded">✅ MATCHES YOUR SEARCH!</span>' : '';
+                            html += `<div class="font-mono text-sm">${variant}${matchBadge}</div>`;
+                        }
+                        
+                        html += `</div>`;
+                        html += `<div class="text-xs text-amber-700 mt-2 italic">Total variants: ${data.variant_info.total_variants}</div>`;
+                        html += `</div>`;
+                    }
+                    
+                    // Show field coverage
+                    if (data.field_coverage) {
+                        html += `<div class="mt-4 p-3 bg-blue-50 rounded-lg">`;
+                        html += `<div><strong>Data Coverage:</strong> ${data.field_coverage.coverage_percent}%</div>`;
+                        html += `<div class="text-sm text-gray-600">${data.field_coverage.populated_fields} of ${data.field_coverage.total_fields} fields populated</div>`;
+                        html += `</div>`;
+                    }
+                    
+                } else {
+                    html += `<div class="text-red-600">Error: ${data.error}</div>`;
+                }
+                
+                detailDiv.innerHTML = html;
+                
+            } catch (error) {
+                detailDiv.innerHTML = `<div class="text-red-600">Error loading details: ${error.message}</div>`;
+            }
+        }
+    </script>
+</body>
+</html>
