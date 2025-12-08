@@ -1639,6 +1639,71 @@ async def search_ferguson_products(
         
         response_time = time.time() - start_time
         
+        # Enhance products with smart variant matching for Salesforce compatibility
+        products = data.get("results", [])
+        search_model = request.search.upper().strip()
+        
+        for product in products:
+            # Add best_match_url field for easy Salesforce integration
+            best_url = None
+            best_model = None
+            match_type = None
+            
+            # Get product's base model and URL
+            product_model = product.get("model_no", "").upper().strip()
+            product_url = product.get("url")
+            
+            # Check variants for matches
+            variants = product.get("variants", [])
+            if variants:
+                # Try exact match first
+                for variant in variants:
+                    variant_model = variant.get("model_no", "").upper().strip()
+                    if variant_model == search_model:
+                        best_url = variant.get("url")
+                        best_model = variant.get("model_no")
+                        match_type = "exact_variant"
+                        break
+                
+                # Try fuzzy match if no exact match
+                if not best_url:
+                    for variant in variants:
+                        variant_model = variant.get("model_no", "").upper().strip()
+                        # Remove common separators for comparison
+                        clean_search = search_model.replace("-", "").replace("_", "")
+                        clean_variant = variant_model.replace("-", "").replace("_", "")
+                        if clean_search == clean_variant:
+                            best_url = variant.get("url")
+                            best_model = variant.get("model_no")
+                            match_type = "fuzzy_variant"
+                            break
+                
+                # Use first variant as fallback
+                if not best_url and variants:
+                    best_url = variants[0].get("url")
+                    best_model = variants[0].get("model_no")
+                    match_type = "first_variant"
+            
+            # Check base product match
+            if not best_url:
+                clean_search = search_model.replace("-", "").replace("_", "")
+                clean_product = product_model.replace("-", "").replace("_", "")
+                if clean_search == clean_product or product_model == search_model:
+                    best_url = product_url
+                    best_model = product.get("model_no")
+                    match_type = "base_product"
+            
+            # Final fallback: use product URL if available
+            if not best_url and product_url:
+                best_url = product_url
+                best_model = product.get("model_no")
+                match_type = "product_fallback"
+            
+            # Add the matched URL to product for easy Salesforce access
+            product["best_match_url"] = best_url
+            product["best_match_model"] = best_model
+            product["match_type"] = match_type
+        
         return {
             "success": True,
             "platform": "fergusonhome_search",
@@ -1647,13 +1712,14 @@ async def search_ferguson_products(
             "total_results": data.get("total_results", 0),
             "total_pages": data.get("no_of_pages", 0),
             "result_count": data.get("result_count", 0),
-            "products": data.get("results", []),
+            "products": products,
             "meta_data": data.get("meta_data", {}),
             "credits_used": data.get("credits_used", 10),
             "metadata": {
                 "response_time": f"{response_time:.2f}s",
                 "timestamp": datetime.utcnow().isoformat(),
-                "api_version": "fergusonhome_search_v1"
+                "api_version": "fergusonhome_search_v2",
+                "enhancement": "smart_variant_matching"
             }
         }
     
