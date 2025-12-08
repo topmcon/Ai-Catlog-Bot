@@ -1843,6 +1843,47 @@ async def get_ferguson_product_detail(
         if "warranty" in detail_data:
             del detail_data["warranty"]
         
+        # Extract variant-specific details if URL contains uid parameter
+        # This ensures correct finish, color, price, image for the specific variant
+        import re
+        uid_match = re.search(r'uid=(\d+)', request.url)
+        if uid_match and detail_data.get("variants"):
+            uid = int(uid_match.group(1))
+            variants = detail_data.get("variants", [])
+            
+            # Find the variant matching the UID
+            matching_variant = None
+            for variant in variants:
+                if variant.get("id") == uid:
+                    matching_variant = variant
+                    break
+            
+            # If found, promote variant-specific fields to top level
+            if matching_variant:
+                # Promote variant-specific data to detail level
+                detail_data["variant_model_number"] = matching_variant.get("model_number")
+                detail_data["variant_name"] = matching_variant.get("name")  # Finish name
+                detail_data["variant_color"] = matching_variant.get("color")
+                detail_data["variant_price"] = matching_variant.get("price")
+                detail_data["variant_images"] = matching_variant.get("images", [])
+                detail_data["variant_in_stock"] = matching_variant.get("in_stock")
+                detail_data["variant_shipping_lead_time"] = matching_variant.get("shipping_lead_time")
+                detail_data["variant_availability_status"] = matching_variant.get("availability_status")
+                detail_data["variant_url"] = matching_variant.get("url")
+                
+                # Override main fields with variant-specific data for easier Salesforce mapping
+                if matching_variant.get("model_number"):
+                    detail_data["model_no"] = matching_variant.get("model_number")
+                if matching_variant.get("name"):
+                    detail_data["finish"] = matching_variant.get("name")
+                if matching_variant.get("color"):
+                    detail_data["color"] = matching_variant.get("color")
+                if matching_variant.get("price"):
+                    detail_data["price"] = matching_variant.get("price")
+                if matching_variant.get("images"):
+                    # Prepend variant image to images array
+                    detail_data["images"] = matching_variant.get("images", []) + detail_data.get("images", [])
+        
         return {
             "success": True,
             "platform": "fergusonhome_detail",
@@ -1853,7 +1894,8 @@ async def get_ferguson_product_detail(
             "metadata": {
                 "response_time": f"{response_time:.2f}s",
                 "timestamp": datetime.utcnow().isoformat(),
-                "api_version": "fergusonhome_detail_v1"
+                "api_version": "fergusonhome_detail_v1",
+                "variant_specific": uid_match is not None
             }
         }
     
