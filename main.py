@@ -1838,14 +1838,10 @@ async def get_ferguson_product_detail(
         
         response_time = time.time() - start_time
         
-        # Truncate warranty field to prevent Salesforce STRING_TOO_LONG error
-        # Salesforce field limit is typically 255-1000 chars, truncate at 950 to be safe
+        # Omit warranty field completely to prevent Salesforce STRING_TOO_LONG error
         detail_data = data.get("detail", {})
-        if detail_data.get("warranty"):
-            warranty = detail_data["warranty"]
-            if len(warranty) > 950:
-                # Truncate and add ellipsis
-                detail_data["warranty"] = warranty[:947] + "..."
+        if "warranty" in detail_data:
+            del detail_data["warranty"]
         
         return {
             "success": True,
