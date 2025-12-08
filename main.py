@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from openai import OpenAI
 from dotenv import load_dotenv
+from api_logger import logger as api_logger
 
 # Load environment variables
 load_dotenv()
@@ -47,6 +48,60 @@ app = FastAPI(
     description="AI-powered product enrichment engine using OpenAI",
     version="1.0.0"
 )
+
+# API Call Logging Middleware
+@app.middleware("http")
+async def log_api_calls(request: Request, call_next):
+    """Middleware to log all API calls"""
+    start_time = time.time()
+    
+    # Get request data
+    request_body = {}
+    if request.method == "POST":
+        try:
+            body_bytes = await request.body()
+            if body_bytes:
+                request_body = json.loads(body_bytes)
+                # Reset body for downstream handlers
+                async def receive():
+                    return {"type": "http.request", "body": body_bytes}
+                request._receive = receive
+        except:
+            pass
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Calculate response time
+    response_time_ms = int((time.time() - start_time) * 1000)
+    
+    # Get response data
+    response_body = {}
+    if hasattr(response, 'body'):
+        try:
+            response_body = json.loads(response.body.decode())
+        except:
+            pass
+    
+    # Log the call (async, don't block response)
+    try:
+        api_key = request.headers.get('x-api-key') or request.headers.get('X-API-KEY')
+        client_ip = request.client.host if request.client else None
+        
+        api_logger.log_call(
+            endpoint=request.url.path,
+            method=request.method,
+            request_data=request_body,
+            response_data=response_body,
+            response_time_ms=response_time_ms,
+            status_code=response.status_code,
+            client_ip=client_ip,
+            api_key=api_key
+        )
+    except Exception as log_error:
+        print(f"Failed to log API call: {log_error}")
+    
+    return response
 
 # Configure CORS - Allow frontend to access the API
 app.add_middleware(
@@ -2090,6 +2145,66 @@ async def general_exception_handler(request: Request, exc: Exception):
             "error": f"Internal server error: {str(exc)}"
         }
     )
+
+# ===================================================================
+# API CALL LOGGING ENDPOINTS
+# ===================================================================
+
+@app.get("/api-logs/recent")
+async def get_recent_api_logs(
+    limit: int = 100,
+    endpoint: Optional[str] = None,
+    x_api_key: str = Header(None)
+):
+    """Get recent API call logs"""
+    if not verify_api_key(x_api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    logs = api_logger.get_recent_calls(limit=limit, endpoint=endpoint)
+    return {
+        "success": True,
+        "count": len(logs),
+        "logs": logs
+    }
+
+@app.get("/api-logs/stats")
+async def get_api_stats(
+    hours: int = 24,
+    x_api_key: str = Header(None)
+):
+    """Get API call statistics"""
+    if not verify_api_key(x_api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    stats = api_logger.get_stats(hours=hours)
+    return {
+        "success": True,
+        **stats
+    }
+
+@app.get("/api-logs/search")
+async def search_api_logs(
+    model_number: Optional[str] = None,
+    endpoint: Optional[str] = None,
+    success: Optional[bool] = None,
+    limit: int = 50,
+    x_api_key: str = Header(None)
+):
+    """Search API call logs"""
+    if not verify_api_key(x_api_key):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    
+    logs = api_logger.search_calls(
+        model_number=model_number,
+        endpoint=endpoint,
+        success=success,
+        limit=limit
+    )
+    return {
+        "success": True,
+        "count": len(logs),
+        "logs": logs
+    }
 
 # Run the app (for local development)
 if __name__ == "__main__":
