@@ -1641,6 +1641,7 @@ async def search_ferguson_products(
         
         # Enhance products with smart variant matching for Salesforce compatibility
         products = data.get("results", [])
+        search_model_original = request.search.strip()  # Keep original case
         search_model = request.search.upper().strip()
         
         for product in products:
@@ -1656,13 +1657,23 @@ async def search_ferguson_products(
             # Check variants for matches
             variants = product.get("variants", [])
             if variants:
-                # Try exact match first
+                # PRIORITY 1: Try exact case-insensitive match first
                 for variant in variants:
-                    variant_model = variant.get("model_no", "").upper().strip()
+                    variant_model_original = variant.get("model_no", "").strip()
+                    variant_model = variant_model_original.upper()
+                    
+                    # Exact match (case-insensitive)
                     if variant_model == search_model:
                         best_url = variant.get("url")
-                        best_model = variant.get("model_no")
+                        best_model = variant_model_original  # Keep original case from Ferguson
                         match_type = "exact_variant"
+                        break
+                    
+                    # Also try exact case-sensitive match
+                    if variant_model_original == search_model_original:
+                        best_url = variant.get("url")
+                        best_model = variant_model_original
+                        match_type = "exact_variant_case_sensitive"
                         break
                 
                 # Try fuzzy match if no exact match
