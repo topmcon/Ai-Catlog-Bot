@@ -1874,6 +1874,7 @@ async def get_ferguson_product_detail(
                 # Override main fields with variant-specific data for easier Salesforce mapping
                 if matching_variant.get("model_number"):
                     detail_data["model_no"] = matching_variant.get("model_number")
+                    detail_data["model"] = matching_variant.get("model_number")  # Salesforce alias
                 if matching_variant.get("name"):
                     detail_data["finish"] = matching_variant.get("name")
                 if matching_variant.get("color"):
