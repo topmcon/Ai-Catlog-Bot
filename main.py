@@ -1644,6 +1644,11 @@ async def search_ferguson_products(
         search_model_original = request.search.strip()  # Keep original case
         search_model = request.search.upper().strip()
         
+        # Track best match across ALL products to reorder results
+        exact_match_products = []
+        fuzzy_match_products = []
+        other_products = []
+        
         for product in products:
             # Add best_match_url field for easy Salesforce integration
             best_url = None
@@ -1714,6 +1719,18 @@ async def search_ferguson_products(
             product["best_match_url"] = best_url
             product["best_match_model"] = best_model
             product["match_type"] = match_type
+            
+            # Categorize products by match quality for reordering
+            if match_type in ["exact_variant", "exact_variant_case_sensitive"]:
+                exact_match_products.append(product)
+            elif match_type in ["fuzzy_variant", "base_product"]:
+                fuzzy_match_products.append(product)
+            else:
+                other_products.append(product)
+        
+        # Reorder products: exact matches first, then fuzzy, then others
+        # This ensures Salesforce sees the exact match as the first product
+        reordered_products = exact_match_products + fuzzy_match_products + other_products
         
         return {
             "success": True,
@@ -1723,7 +1740,7 @@ async def search_ferguson_products(
             "total_results": data.get("total_results", 0),
             "total_pages": data.get("no_of_pages", 0),
             "result_count": data.get("result_count", 0),
-            "products": products,
+            "products": reordered_products,
             "meta_data": data.get("meta_data", {}),
             "credits_used": data.get("credits_used", 10),
             "metadata": {
