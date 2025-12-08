@@ -1875,6 +1875,7 @@ async def get_ferguson_product_detail(
                 if matching_variant.get("model_number"):
                     detail_data["model_no"] = matching_variant.get("model_number")
                     detail_data["model"] = matching_variant.get("model_number")  # Salesforce alias
+                    detail_data["model_number"] = matching_variant.get("model_number")  # CRITICAL: Salesforce uses this field
                 if matching_variant.get("name"):
                     detail_data["finish"] = matching_variant.get("name")
                 if matching_variant.get("color"):
