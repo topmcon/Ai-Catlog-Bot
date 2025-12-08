@@ -1561,6 +1561,119 @@ async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):
     }
 
 # ============================================================================
+# ASK AI - Product Q&A Endpoint
+# ============================================================================
+
+class AskAIRequest(BaseModel):
+    """Request model for Ask AI product questions"""
+    brand: Optional[str] = Field(None, description="Product brand")
+    model_number: Optional[str] = Field(None, description="Product model number")
+    product_name: Optional[str] = Field(None, description="Product name/title")
+    additional_context: str = Field(..., description="Question and product details")
+
+class AskAIResponse(BaseModel):
+    """Response model for Ask AI"""
+    success: bool
+    data: Optional[dict] = None
+    error: Optional[str] = None
+
+@app.post("/ask-ai", response_model=AskAIResponse)
+@app.post("/enrich-catalog", response_model=AskAIResponse)  # Legacy alias
+async def ask_ai_question(
+    request: AskAIRequest,
+    x_api_key: str = Header(..., alias="X-API-KEY"),
+    user_agent: str = Header(None, alias="User-Agent"),
+    referer: str = Header(None, alias="Referer")
+):
+    """
+    Answer questions about products using AI.
+    Also accessible via /enrich-catalog for backwards compatibility.
+    
+    Extracts the question from additional_context and uses product details to provide accurate answers.
+    """
+    # Verify API key
+    await verify_api_key(x_api_key)
+    
+    start_time = time.time()
+    
+    # Detect source
+    source = "ui" if referer and ("vercel.app" in referer or "localhost" in referer) else "api"
+    
+    try:
+        # Extract question from additional_context
+        context = request.additional_context or ""
+        
+        # Determine which AI provider to use
+        provider_name = "openai" if AI_PROVIDERS["openai"]["enabled"] else "xai"
+        provider = AI_PROVIDERS[provider_name]
+        client = provider["client"]
+        model = provider["model"]
+        
+        # Build a focused prompt for answering questions
+        system_prompt = """You are Mardey's AI assistant, an expert at answering questions about products.
+Your job is to analyze the product details provided and answer the user's question accurately and concisely.
+
+Rules:
+1. Answer directly and clearly
+2. Use the product details provided in the context
+3. If the answer isn't in the provided details, say so politely
+4. Keep answers under 200 words unless more detail is needed
+5. Be helpful and friendly"""
+
+        user_prompt = f"""Product Information:
+Brand: {request.brand or 'Unknown'}
+Model: {request.model_number or 'Unknown'}
+Name: {request.product_name or 'Unknown'}
+
+{context}
+
+Please answer the question based on the product details above."""
+
+        # Call AI
+        ai_start = time.time()
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        ai_time = time.time() - ai_start
+        
+        answer = response.choices[0].message.content
+        
+        # Extract question from context for logging
+        question_line = ""
+        for line in context.split('\n'):
+            if line.startswith('Question:'):
+                question_line = line.replace('Question:', '').strip()
+                break
+        
+        response_time = time.time() - start_time
+        
+        return AskAIResponse(
+            success=True,
+            data={
+                "enriched_data": answer,
+                "answer": answer,
+                "question": question_line,
+                "ai_provider": provider["name"],
+                "response_time": round(response_time, 2),
+                "ai_processing_time": round(ai_time, 2)
+            }
+        )
+        
+    except Exception as e:
+        response_time = time.time() - start_time
+        print(f"Ask AI error: {str(e)}")
+        return AskAIResponse(
+            success=False,
+            error=str(e)
+        )
+
+# ============================================================================
 # FERGUSON HOME APIs (Unwrangle Integration)
 # ============================================================================
 
