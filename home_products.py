@@ -4,7 +4,7 @@ Supports: Plumbing, Kitchen, Lighting, Bath, Fans, Hardware, Cabinet Hardware, O
 Master Product Data Schema v1.0 - Sections A through L
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -14,6 +14,8 @@ from datetime import datetime
 
 class ProductIdentity(BaseModel):
     """Every product must contain these fields"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     brand: Optional[str] = Field(None, description="Manufacturer brand")
     model_number: Optional[str] = Field(None, description="Manufacturer model number")
     mpn: Optional[str] = Field(None, description="Manufacturer part number")
@@ -217,6 +219,8 @@ class HomeProductRecord(BaseModel):
     Complete home products enrichment record covering all departments:
     Bathroom, Kitchen, Lighting, Bath, Fans, Hardware, Cabinet Hardware, Outdoor, HVAC
     """
+    model_config = ConfigDict(protected_namespaces=())
+    
     # Section A
     product_identity: ProductIdentity
     

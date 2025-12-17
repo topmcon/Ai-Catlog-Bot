@@ -16,10 +16,14 @@ htmlcov/
 env/
 venv/
 ENV/
+*.env.local
+*.env.production
 
 # Logs
 *.log
+logs/
 backend.log
+api_calls.db
 
 # Backups & Archives
 *.tar.gz
@@ -31,7 +35,6 @@ backups/
 node_modules/
 frontend/dist/
 frontend/node_modules/
-package-lock.json
 
 # IDE
 .vscode/
@@ -57,28 +60,9 @@ temp/
 # Documentation archives
 docs/archive/
 
-# Python cache
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# Logs
-*.log
-
-# Environment
-.env
-*.env.local
-
-# Temporary files
-*~
-*.tmp
-.DS_Store
-
-# Backups (keep structure but not content in git)
-backups/backup_*/
-
-# IDE
-.vscode/
-.idea/
+# Test outputs and reports
+test_report_*.txt
+*_TEST_REPORT.md
+COPY_TO_NEW_REPO.md
+AI_SETUP_README.md
 

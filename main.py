@@ -13,7 +13,7 @@ from collections import defaultdict
 from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from openai import OpenAI
 from dotenv import load_dotenv
 from api_logger import logger as api_logger
@@ -397,10 +397,14 @@ def get_performance_comparison() -> dict:
 
 # Pydantic models for request/response
 class EnrichRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     brand: str = Field(..., description="Product brand name")
     model_number: str = Field(..., description="Product model number")
 
 class VerifiedInformation(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+    
     brand: str
     model_number: str
     product_title: str
@@ -1422,6 +1426,8 @@ Return comprehensive, verified product data in the specified JSON format."""
 
 class HomeProductEnrichRequest(BaseModel):
     """Request model for home product enrichment"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_number: str = Field(..., description="Product model number (REQUIRED)")
     brand: Optional[str] = Field(None, description="Brand name (optional, helps identification)")
     description: Optional[str] = Field(None, description="Brief description (optional, helps identification)")
@@ -1566,6 +1572,8 @@ async def get_home_products_ai_metrics(x_api_key: Optional[str] = Header(None)):
 
 class AskAIRequest(BaseModel):
     """Request model for Ask AI product questions"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     brand: Optional[str] = Field(None, description="Product brand")
     model_number: Optional[str] = Field(None, description="Product model number")
     product_name: Optional[str] = Field(None, description="Product name/title")
@@ -2037,6 +2045,8 @@ async def get_ferguson_product_detail(
 
 class FergusonCompleteLookupRequest(BaseModel):
     """Request model for complete Ferguson product lookup"""
+    model_config = ConfigDict(protected_namespaces=())
+    
     model_number: str = Field(..., description="Manufacturer model number")
 
 def generate_model_variations(model_number: str) -> list:
@@ -2386,6 +2396,19 @@ async def lookup_ferguson_complete(
             status_code=500,
             detail=f"Complete lookup failed: {str(e)}"
         )
+
+# Alias endpoint for Salesforce compatibility (documented as /lookup-ferguson)
+@app.post("/lookup-ferguson")
+async def lookup_ferguson_alias(
+    request: FergusonCompleteLookupRequest,
+    x_api_key: Optional[str] = Header(None)
+):
+    """
+    Alias for /lookup-ferguson-complete endpoint.
+    This endpoint exists for backward compatibility with Salesforce integration documentation.
+    Redirects to the complete lookup function.
+    """
+    return await lookup_ferguson_complete(request, x_api_key)
 
 # Error handlers
 @app.exception_handler(HTTPException)
