@@ -2057,6 +2057,17 @@ def generate_model_variations(model_number: str) -> list:
     model = model_number.strip()
     variations = [model]  # Original
     
+    # Add/remove internal spaces (OB30SCEPX3N <-> OB30SCEPX3 N)
+    if " " in model:
+        variations.append(model.replace(" ", ""))  # Remove spaces
+    else:
+        # Try adding space before last character (common pattern)
+        if len(model) > 1:
+            variations.append(f"{model[:-1]} {model[-1]}")  # OB30SCEPX3N -> OB30SCEPX3 N
+        # Try adding spaces before last 2 characters
+        if len(model) > 2:
+            variations.append(f"{model[:-2]} {model[-2:]}")  # ABC123XY -> ABC123 XY
+    
     # Common brand prefixes
     prefixes = ["K-", "G-", "M-", "A-"]
     for prefix in prefixes:
