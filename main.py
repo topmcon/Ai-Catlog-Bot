@@ -1758,6 +1758,40 @@ async def search_ferguson_products(
                 detail="Ferguson search returned unsuccessful response"
             )
         
+        # If no results, try hyphen variations (e.g., UHNP115IS01B → UHNP115-IS01B, UHNP115-IS-01B, etc.)
+        results_count = data.get("stats", {}).get("total_results", 0)
+        if results_count == 0 and len(request.search) > 5:
+            # Generate hyphen variations for model numbers
+            original_search = request.search.strip()
+            hyphen_variations = []
+            
+            # Try adding hyphens at common positions for model numbers
+            # Pattern 1: After first group of letters/numbers (ABC123DEF → ABC123-DEF)
+            import re
+            if re.match(r'^[A-Z]+\d+[A-Z]+', original_search, re.IGNORECASE):
+                # Format: LETTERS+NUMBERS+LETTERS (e.g., UHNP115IS01B)
+                match = re.match(r'^([A-Z]+\d+)([A-Z]+.*)$', original_search, re.IGNORECASE)
+                if match:
+                    hyphen_variations.append(f"{match.group(1)}-{match.group(2)}")
+                    # Try additional splits
+                    inner_match = re.match(r'^([A-Z]+)(\d+)([A-Z]+)(.*)$', original_search, re.IGNORECASE)
+                    if inner_match:
+                        hyphen_variations.append(f"{inner_match.group(1)}{inner_match.group(2)}-{inner_match.group(3)}{inner_match.group(4)}")
+                        hyphen_variations.append(f"{inner_match.group(1)}{inner_match.group(2)}-{inner_match.group(3)}-{inner_match.group(4)}")
+            
+            # Try the most promising variation
+            for variation in hyphen_variations[:2]:  # Limit to 2 attempts to save credits
+                print(f"Original search '{original_search}' returned 0 results. Trying variation: '{variation}'")
+                retry_params = params.copy()
+                retry_params["search"] = variation
+                retry_response = requests.get(base_url, params=retry_params, timeout=30)
+                retry_data = retry_response.json()
+                
+                if retry_data.get("success") and retry_data.get("stats", {}).get("total_results", 0) > 0:
+                    print(f"Found results with variation '{variation}'!")
+                    data = retry_data  # Use the successful retry data
+                    break
+        
         response_time = time.time() - start_time
         
         # Enhance products with smart variant matching for Salesforce compatibility
