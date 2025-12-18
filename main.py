@@ -1758,7 +1758,7 @@ async def search_ferguson_products(
                 detail="Ferguson search returned unsuccessful response"
             )
         
-        # If no results, try hyphen variations (e.g., UHNP115IS01B → UHNP115-IS01B, UHNP115-IS-01B, etc.)
+        # If no results, try hyphen variations (e.g., UHNP115IS01B → UHNP115-01B, UHNP115-IS01B, etc.)
         results_count = data.get("stats", {}).get("total_results", 0)
         if results_count == 0 and len(request.search) > 5:
             # Generate hyphen variations for model numbers
@@ -1766,21 +1766,30 @@ async def search_ferguson_products(
             hyphen_variations = []
             
             # Try adding hyphens at common positions for model numbers
-            # Pattern 1: After first group of letters/numbers (ABC123DEF → ABC123-DEF)
             import re
-            if re.match(r'^[A-Z]+\d+[A-Z]+', original_search, re.IGNORECASE):
-                # Format: LETTERS+NUMBERS+LETTERS (e.g., UHNP115IS01B)
-                match = re.match(r'^([A-Z]+\d+)([A-Z]+.*)$', original_search, re.IGNORECASE)
-                if match:
-                    hyphen_variations.append(f"{match.group(1)}-{match.group(2)}")
-                    # Try additional splits
-                    inner_match = re.match(r'^([A-Z]+)(\d+)([A-Z]+)(.*)$', original_search, re.IGNORECASE)
-                    if inner_match:
-                        hyphen_variations.append(f"{inner_match.group(1)}{inner_match.group(2)}-{inner_match.group(3)}{inner_match.group(4)}")
-                        hyphen_variations.append(f"{inner_match.group(1)}{inner_match.group(2)}-{inner_match.group(3)}-{inner_match.group(4)}")
             
-            # Try the most promising variation
-            for variation in hyphen_variations[:2]:  # Limit to 2 attempts to save credits
+            # Common patterns for appliance model numbers:
+            # UHNP115IS01B → UHNP115-01B (remove middle letters, keep ending)
+            # UHNP115IS01B → UHNP115-IS01B (add hyphen after first group)
+            # ABC123DEF456 → ABC123-DEF456 (letters+numbers then letters+numbers)
+            
+            # Pattern 1: LETTERS+NUMBERS+LETTERS+NUMBERS → LETTERS+NUMBERS-NUMBERS
+            match1 = re.match(r'^([A-Z]+)(\d+)[A-Z]+(\d+[A-Z]*)$', original_search, re.IGNORECASE)
+            if match1:
+                hyphen_variations.append(f"{match1.group(1)}{match1.group(2)}-{match1.group(3)}")
+            
+            # Pattern 2: LETTERS+NUMBERS+LETTERS+REST → LETTERS+NUMBERS-LETTERS+REST
+            match2 = re.match(r'^([A-Z]+\d+)([A-Z]+.*)$', original_search, re.IGNORECASE)
+            if match2:
+                hyphen_variations.append(f"{match2.group(1)}-{match2.group(2)}")
+            
+            # Pattern 3: More granular splits
+            match3 = re.match(r'^([A-Z]+)(\d+)([A-Z]+)(.*)$', original_search, re.IGNORECASE)
+            if match3:
+                hyphen_variations.append(f"{match3.group(1)}{match3.group(2)}-{match3.group(3)}-{match3.group(4)}")
+            
+            # Try each variation (limit to 3 to save API credits)
+            for variation in hyphen_variations[:3]:
                 print(f"Original search '{original_search}' returned 0 results. Trying variation: '{variation}'")
                 retry_params = params.copy()
                 retry_params["search"] = variation
