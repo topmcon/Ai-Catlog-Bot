@@ -1759,7 +1759,7 @@ async def search_ferguson_products(
             )
         
         # If no results, try hyphen variations (e.g., UHNP115IS01B → UHNP115-01B, UHNP115-IS01B, etc.)
-        results_count = data.get("stats", {}).get("total_results", 0)
+        results_count = data.get("total_results", 0) or data.get("stats", {}).get("total_results", 0)
         if results_count == 0 and len(request.search) > 5:
             # Generate hyphen variations for model numbers
             original_search = request.search.strip()
@@ -1796,7 +1796,8 @@ async def search_ferguson_products(
                 retry_response = requests.get(base_url, params=retry_params, timeout=30)
                 retry_data = retry_response.json()
                 
-                if retry_data.get("success") and retry_data.get("stats", {}).get("total_results", 0) > 0:
+                retry_results = retry_data.get("total_results", 0) or retry_data.get("stats", {}).get("total_results", 0)
+                if retry_data.get("success") and retry_results > 0:
                     print(f"Found results with variation '{variation}'!")
                     data = retry_data  # Use the successful retry data
                     break
@@ -2225,13 +2226,20 @@ async def lookup_ferguson_complete(
         step1_time = time.time() - step1_start
         
         if not search_data.get("success"):
-            raise HTTPException(status_code=404, detail="Product not found in Ferguson")
+            return {
+                "success": False,
+                "error": "Not A Ferguson Product",
+                "message": f"Model {model_number} is not available in Ferguson's catalog",
+                "model_number": model_number
+            }
         
         if not search_data.get("results"):
-            raise HTTPException(
-                status_code=404,
-                detail=f"No products found for model {model_number}"
-            )
+            return {
+                "success": False,
+                "error": "Not A Ferguson Product",
+                "message": f"Model {model_number} is not available in Ferguson's catalog",
+                "model_number": model_number
+            }
         
         print(f"Step 1: ✓ Found {len(search_data.get('results', []))} products ({step1_time:.2f}s)")
         
@@ -2264,17 +2272,16 @@ async def lookup_ferguson_complete(
                 for variant in product.get("variants", []):
                     available_variants.append(variant.get("model_no"))
             
-            raise HTTPException(
-                status_code=404,
-                detail={
-                    "error": "Variant not found",
-                    "requested_model": model_number,
-                    "available_models": available_variants,
-                    "hint": "No match found even with format variations (K- prefix, hyphens, etc.)",
-                    "total_products_found": len(search_data.get("results", [])),
-                    "total_variants_found": len(available_variants)
-                }
-            )
+            return {
+                "success": False,
+                "error": "Not A Ferguson Product",
+                "message": f"Model {model_number} not found in Ferguson catalog",
+                "requested_model": model_number,
+                "available_models": available_variants,
+                "hint": "Similar products found but no exact match",
+                "total_products_found": len(search_data.get("results", [])),
+                "total_variants_found": len(available_variants)
+            }
         
         # Unpack the result tuple
         variant_url, matched_model, match_type = match_result
